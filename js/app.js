@@ -6,13 +6,13 @@
  * - window.SplendorPhysics3D (physics_3d.js)
  * - window.SplendorNet (multiplayer.js)
  *
- * Build Version: [v1.2.4 | 2026-10-20 07:35]
+ * Build Version: [v1.2.5 | 2026-10-20 08:12]
  */
 
 (function (global) {
   'use strict';
 
-  const APP_VERSION = '[v1.2.4 | 2026-10-20 07:35]';
+  const APP_VERSION = '[v1.2.5 | 2026-10-20 08:12]';
   const WIN_STATS_STORAGE_KEY = 'splendor_win_stats_v1';
 
   // Gem key mapping & UI helpers
@@ -1720,12 +1720,42 @@
             const meta = GEM_UI_META[rCard.bonusGem];
             const frontImg = rCard.imageUrl || backImg;
             const evalReserved = global.SplendorData.evaluateCardPurchase(p, rCard, enableOrient);
+
+            const missingList = GEM_KEYS.filter((g) => (evalReserved.missingByGem && evalReserved.missingByGem[g]) > 0);
+            const missingColorText = missingList
+              .map((g) => `${GEM_UI_META[g].icon}${GEM_UI_META[g].kor} ${evalReserved.missingByGem[g]}개`)
+              .join(', ');
+            const goldNote = (evalReserved.availableGold || 0) > 0 ? ` (보유 황금조커 🪙${evalReserved.availableGold}개 차감 시 총 ${evalReserved.missingTokens}개 부족)` : '';
+
+            let missingRowHtml = '';
+            if (evalReserved.canAfford) {
+              missingRowHtml = `<div class="mini-rslot-missing-row"><span class="rslot-missing-chip" style="background:rgba(5,150,105,0.9); color:#fff;">✅ 즉시 구매 가능${evalReserved.goldNeeded > 0 ? ` (🪙조커 ${evalReserved.goldNeeded} 사용)` : ''}</span></div>`;
+            } else {
+              const chipsHtml = missingList
+                .map((g) => {
+                  const gMeta = GEM_UI_META[g];
+                  const cnt = evalReserved.missingByGem[g];
+                  return `<span class="rslot-missing-chip gem-col-${g}" style="color:#fff;">${gMeta.icon}${gMeta.short}-${cnt}</span>`;
+                })
+                .join('');
+              const jokerTag = (evalReserved.availableGold || 0) > 0
+                ? `<span class="rslot-missing-chip gem-col-gold" style="color:#fde047;" title="보유 중인 황금 조커 토큰">🪙+${evalReserved.availableGold}</span>`
+                : '';
+              missingRowHtml = `<div class="mini-rslot-missing-row">${chipsHtml}${jokerTag}</div>`;
+            }
+
             const buyBadge = evalReserved.canAfford
               ? `<span style="color:#ffffff; background:#059669; padding:2px 6px; border-radius:999px; font-size:0.65rem; font-weight:900;">🛒구매</span>`
-              : `<span style="color:#fca5a5; background:rgba(0,0,0,0.65); padding:1px 5px; border-radius:4px; font-size:0.62rem; font-weight:800;">부족${evalReserved.missingTokens}</span>`;
-            return `<div class="mini-reserved-slot filled gem-col-${rCard.bonusGem}" data-rslot="${slotIdx}" data-reserved-card-id="${rCard.id}" style="background:linear-gradient(90deg, rgba(15,23,42,0.72), rgba(15,23,42,0.35)), url('${frontImg}') center/cover no-repeat; border-width:2px;" title="클릭하여 예약 카드 즉시 구매 (${meta.kor} 보너스 · +${rCard.points}점)">
-              <span style="text-shadow:0 1px 4px #000; font-weight:900;">${meta.icon}${meta.short} L${rCard.level} (${rCard.points}점)</span>
-              ${buyBadge}
+              : `<span style="color:#fca5a5; background:rgba(0,0,0,0.75); padding:1px 5px; border-radius:4px; font-size:0.62rem; font-weight:800;">부족 ${evalReserved.missingTokens}</span>`;
+            const slotTitle = evalReserved.canAfford
+              ? `클릭하여 예약 카드 즉시 구매 (${meta.kor} 보너스 · +${rCard.points}점)`
+              : `부족한 보석: ${missingColorText}${goldNote}`;
+            return `<div class="mini-reserved-slot filled gem-col-${rCard.bonusGem}" data-rslot="${slotIdx}" data-reserved-card-id="${rCard.id}" style="background:linear-gradient(90deg, rgba(15,23,42,0.82), rgba(15,23,42,0.48)), url('${frontImg}') center/cover no-repeat; border-width:2px;" title="${slotTitle}">
+              <div class="mini-rslot-top">
+                <span style="text-shadow:0 1px 4px #000; font-weight:900;">${meta.icon}${meta.short} L${rCard.level} (${rCard.points}점)</span>
+                ${buyBadge}
+              </div>
+              ${missingRowHtml}
             </div>`;
           })
           .join('');
@@ -1824,7 +1854,11 @@
             }
             const evalRes = global.SplendorData.evaluateCardPurchase(p, rCard, enableOrient);
             if (!evalRes.canAfford) {
-              this.showToast(`예약한 카드를 구매하기에 보석 토큰이 ${evalRes.missingTokens}개 부족합니다.`);
+              const missingDesc = GEM_KEYS.filter((g) => (evalRes.missingByGem && evalRes.missingByGem[g]) > 0)
+                .map((g) => `${GEM_UI_META[g].icon}${GEM_UI_META[g].kor} ${evalRes.missingByGem[g]}개`)
+                .join(', ');
+              const goldDesc = (evalRes.availableGold || 0) > 0 ? ` (보유 조커 🪙${evalRes.availableGold}개 사용 후 총 ${evalRes.missingTokens}개 부족)` : '';
+              this.showToast(`예약 카드 구매에 [${missingDesc}] 토큰이 부족합니다!${goldDesc}`);
               return;
             }
             const shAction = enableStrongholds

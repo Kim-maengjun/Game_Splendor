@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>스플렌더 3D: 르네상스 &amp; 오리엔트 에디션 [v1.2.4 | 2026-10-20 07:35]</title>
+  <title>스플렌더 3D: 르네상스 &amp; 오리엔트 에디션 [v1.2.5 | 2026-10-20 08:12]</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💎</text></svg>" />
   <!-- Google Fonts: Cinzel,Playfair Display, Noto Sans KR -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -1259,17 +1259,46 @@
     .mini-reserved-slot {
       flex: 1;
       min-width: 78px;
-      height: 54px;
+      min-height: 54px;
       border-radius: 7px;
       border: 1.5px dashed rgba(255, 255, 255, 0.25);
       background: rgba(0, 0, 0, 0.35);
       display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 4px 7px;
-      font-size: 0.74rem;
+      flex-direction: column;
+      align-items: stretch;
+      justify-content: center;
+      gap: 3px;
+      padding: 4px 6px;
+      font-size: 0.72rem;
       cursor: pointer;
       transition: all 0.15s ease;
+    }
+
+    .mini-rslot-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+    }
+
+    .mini-rslot-missing-row {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 2px;
+      width: 100%;
+    }
+
+    .rslot-missing-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 1px;
+      padding: 1px 4px;
+      border-radius: 4px;
+      font-size: 0.61rem;
+      font-weight: 900;
+      line-height: 1.1;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.8);
     }
 
     .mini-reserved-slot.filled {
@@ -1539,7 +1568,7 @@
       <div class="brand-logo">
         <span>💎 SPLENDOR 3D</span>
       </div>
-      <span class="version-badge" id="versionBadge">[v1.2.4 | 2026-10-20 07:35]</span>
+      <span class="version-badge" id="versionBadge">[v1.2.5 | 2026-10-20 08:12]</span>
       <span class="mode-pill" id="activeRuleBadge">전통 룰 (Classic 15점)</span>
       <div class="net-status-pill" id="netStatusBadge" title="클릭하여 멀티플레이 설정 열기">
         <span>🟢 로컬 패스 앤 플레이</span>

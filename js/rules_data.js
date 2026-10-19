@@ -540,11 +540,12 @@
   // 특정 카드를 구매하기 위해 필요한 실제 토큰 지불 비용 및 가능 여부 계산
   function evaluateCardPurchase(player, card, enableOrientAbilities = false) {
     if (!player || !card) {
-      return { canAfford: false, goldNeeded: 99, missingTokens: 99, payment: null };
+      return { canAfford: false, goldNeeded: 99, availableGold: 0, missingTokens: 99, missingByGem: {}, payment: null };
     }
     const bonuses = getPlayerBonuses(player, enableOrientAbilities);
     const tokens = player.tokens || {};
     const payment = { emerald: 0, sapphire: 0, ruby: 0, diamond: 0, onyx: 0, gold: 0 };
+    const missingByGem = { emerald: 0, sapphire: 0, ruby: 0, diamond: 0, onyx: 0 };
     let goldNeeded = 0;
     let totalShortfallAfterBonus = 0;
 
@@ -559,7 +560,9 @@
         payment[gem] = netCost;
       } else {
         payment[gem] = availableGem;
-        goldNeeded += (netCost - availableGem);
+        const diff = netCost - availableGem;
+        missingByGem[gem] = diff;
+        goldNeeded += diff;
       }
     }
 
@@ -571,7 +574,9 @@
     return {
       canAfford,
       goldNeeded,
+      availableGold,
       missingTokens,
+      missingByGem,
       totalShortfallAfterBonus,
       payment
     };
