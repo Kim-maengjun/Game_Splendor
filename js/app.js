@@ -6,13 +6,13 @@
  * - window.SplendorPhysics3D (physics_3d.js)
  * - window.SplendorNet (multiplayer.js)
  *
- * Build Version: [v1.2.1 | 2026-10-19 23:42]
+ * Build Version: [v1.2.2 | 2026-10-20 00:22]
  */
 
 (function (global) {
   'use strict';
 
-  const APP_VERSION = '[v1.2.1 | 2026-10-19 23:42]';
+  const APP_VERSION = '[v1.2.2 | 2026-10-20 00:22]';
   const WIN_STATS_STORAGE_KEY = 'splendor_win_stats_v1';
 
   // Gem key mapping & UI helpers
@@ -376,13 +376,26 @@
       });
 
       global.SplendorNet.on('onPeersUpdated', (peers, newPeer) => {
-        // When a remote client joins host, automatically set their slot to Human and sync state
+        // When a remote client joins host, automatically set their slot to Human in both lobbyConfig and active state
         if (global.SplendorNet.mode === 'online_host') {
+          (peers || []).forEach((pInfo) => {
+            if (pInfo.slotIndex > 0 && this.lobbyConfig.slots[pInfo.slotIndex]) {
+              this.lobbyConfig.slots[pInfo.slotIndex].isAI = false;
+              this.lobbyConfig.slots[pInfo.slotIndex].name = pInfo.name;
+            }
+            if (pInfo.slotIndex > 0 && this.state && this.state.players[pInfo.slotIndex]) {
+              this.state.players[pInfo.slotIndex].isAI = false;
+              this.state.players[pInfo.slotIndex].name = pInfo.name;
+            }
+          });
           if (newPeer && this.state && this.state.players[newPeer.slotIndex]) {
             this.state.players[newPeer.slotIndex].isAI = false;
             this.state.players[newPeer.slotIndex].name = newPeer.name;
           }
+          this._renderSlotsConfiguration();
           this._broadcastAuthoritativeState('새 참가자 동기화');
+          this.renderAll();
+        } else if (global.SplendorNet.mode === 'online_client') {
           this.renderAll();
         }
       });
@@ -401,10 +414,12 @@
       global.SplendorNet.on('onActionReceived', (actionObj, slotIndex) => {
         // Host receives action from a remote Client
         if (global.SplendorNet.mode !== 'online_host' || !this.state) return;
-        if (this.state.currentPlayerIndex !== slotIndex) {
+        const activeIdx = this.state.currentPlayerIndex;
+        // Accept action if it matches active turn or if client is acting for current non-host human turn
+        if (slotIndex !== activeIdx && activeIdx === 0) {
           return;
         }
-        this.executeAction(actionObj, slotIndex);
+        this.executeAction(actionObj, activeIdx);
       });
     }
 
@@ -457,6 +472,17 @@
       };
 
       const nobles = shuffle(JSON.parse(JSON.stringify(data.NOBLES))).slice(0, setupCfg.nobleCount);
+
+      // If hosting an online room, ensure any connected client slots are set to Human
+      if (global.SplendorNet && global.SplendorNet.mode === 'online_host') {
+        this.lobbyConfig.slots[0].isAI = false;
+        this.lobbyConfig.slots[1].isAI = false;
+        (global.SplendorNet.connectedPeers || []).forEach((pInfo) => {
+          if (pInfo.slotIndex >= 0 && pInfo.slotIndex < count && this.lobbyConfig.slots[pInfo.slotIndex]) {
+            this.lobbyConfig.slots[pInfo.slotIndex].isAI = false;
+          }
+        });
+      }
 
       const players = [];
       for (let i = 0; i < count; i++) {
@@ -531,8 +557,8 @@
       const curIdx = this.state.currentPlayerIndex;
 
       if (global.SplendorNet && global.SplendorNet.mode === 'online_client') {
-        if (global.SplendorNet.mySlotIndex !== curIdx) {
-          this.showToast('아직 당신의 턴이 아닙니다!');
+        if (curIdx === 0 && global.SplendorNet.mySlotIndex !== 0) {
+          this.showToast('아직 방장(P1)의 턴입니다! 방장이 턴을 마치면 자동으로 넘어옵니다.');
           return;
         }
         global.SplendorNet.sendAction(actionObj, curIdx);

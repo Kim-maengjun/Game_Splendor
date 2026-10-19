@@ -130,15 +130,22 @@
         peers: this.connectedPeers
       });
 
-      // 2) WebRTC PeerJS initialization (if PeerJS is loaded)
-      if (typeof Peer !== 'undefined') {
+      // 2) WebRTC PeerJS initialization (with automatic retry if PeerJS CDN script is still loading)
+      const initHostPeer = (attempt = 0) => {
+        if (this.mode !== 'online_host') return;
+        if (typeof Peer === 'undefined') {
+          if (attempt < 25) {
+            setTimeout(() => initHostPeer(attempt + 1), 200);
+          } else {
+            this._emitStatus(`방 활성 [코드: ${this.roomCode}] (다중 탭 실시간 동기화 모드)`, true);
+          }
+          return;
+        }
         const peerJsId = `splendor3d-${this.roomCode.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
         try {
-          this.peer = new Peer(peerJsId, {
-            debug: 1
-          });
+          this.peer = new Peer(peerJsId, { debug: 1 });
 
-          this.peer.on('open', (id) => {
+          this.peer.on('open', () => {
             this._emitStatus(`방 대기 중 [코드: ${this.roomCode}] (WebRTC + 로컬탭 연동 활성)`, true);
           });
 
@@ -153,9 +160,8 @@
         } catch (e) {
           console.warn('[SplendorNet] PeerJS init skipped, using Bridge:', e);
         }
-      } else {
-        this._emitStatus(`방 활성 [코드: ${this.roomCode}] (다중 탭 실시간 동기화 모드)`, true);
-      }
+      };
+      initHostPeer(0);
 
       if (this.callbacks.onPeersUpdated) {
         this.callbacks.onPeersUpdated(this.connectedPeers);
@@ -191,8 +197,15 @@
         preferredSlot
       });
 
-      // 2) Also try WebRTC PeerJS connection for remote PC / Smartphone
-      if (typeof Peer !== 'undefined') {
+      // 2) Also try WebRTC PeerJS connection for remote PC / Smartphone (retry if PeerJS defer is still loading)
+      const initClientPeer = (attempt = 0) => {
+        if (this.mode !== 'online_client') return;
+        if (typeof Peer === 'undefined') {
+          if (attempt < 25) {
+            setTimeout(() => initClientPeer(attempt + 1), 200);
+          }
+          return;
+        }
         try {
           this.peer = new Peer(undefined, { debug: 1 });
           this.peer.on('open', () => {
@@ -225,7 +238,8 @@
         } catch (e) {
           console.warn('[SplendorNet] Client PeerJS error:', e);
         }
-      }
+      };
+      initClientPeer(0);
 
       return true;
     }
@@ -264,7 +278,10 @@
         while (usedSlots.has(assignedSlot) && assignedSlot < 4) {
           assignedSlot++;
         }
-        if (assignedSlot >= 4) assignedSlot = 1;
+        // If a mobile user refreshed their browser and slot 1 was already used, reuse slot 1
+        if (assignedSlot >= 2 && this.connectedPeers.length >= 2 && preferredSlot === null) {
+          assignedSlot = 1;
+        }
 
         existing = {
           peerId: clientPeerId,
@@ -476,6 +493,12 @@
     canControlPlayer(playerIndex, playerObj) {
       if (!playerObj || playerObj.isAI) return false;
       if (this.mode === 'local') return true;
+      if (this.mode === 'online_client') {
+        return this.mySlotIndex === playerIndex || playerIndex > 0;
+      }
+      if (this.mode === 'online_host') {
+        return true;
+      }
       return this.mySlotIndex === playerIndex;
     }
 
