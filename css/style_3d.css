@@ -1,0 +1,698 @@
+/* ==========================================================================
+   Splendor 3D - Responsive Retro 3D Boardgame Stylesheet
+   Version: v1.0.0 | High-Precision CSS3D & Sprite/Fallback Architecture
+   ========================================================================== */
+
+:root {
+  /* Camera & 3D Scene Variables (Controlled by SplendorPhysics3D) */
+  --cam-perspective: 1400px;
+  --cam-pitch: 18deg;
+  --cam-yaw: 0deg;
+  --cam-zoom: 1;
+  --cam-pan-x: 0px;
+  --cam-pan-y: 0px;
+
+  /* Retro Renaissance Luxury Palette */
+  --gold-primary: #d4af37;
+  --gold-bright: #f9e27d;
+  --gold-dark: #8a6d1b;
+  --velvet-bg: #161219;
+  --table-wood: #2a1810;
+
+  /* Gem Colors & Gradients */
+  --gem-diamond: radial-gradient(circle at 30% 30%, #ffffff 0%, #d8f3ff 45%, #7ab8d6 85%, #3d6b82 100%);
+  --gem-sapphire: radial-gradient(circle at 30% 30%, #8ec5ff 0%, #1e62d0 45%, #0c2b66 85%, #051330 100%);
+  --gem-emerald: radial-gradient(circle at 30% 30%, #98ffbe 0%, #179c52 45%, #094d26 85%, #032411 100%);
+  --gem-ruby: radial-gradient(circle at 30% 30%, #ff99a8 0%, #d61c38 45%, #6e0818 85%, #36020a 100%);
+  --gem-onyx: radial-gradient(circle at 30% 30%, #8c8c9e 0%, #363642 45%, #16161c 85%, #050507 100%);
+  --gem-gold: radial-gradient(circle at 30% 30%, #fff3a1 0%, #e5b822 45%, #916c07 85%, #4a3602 100%);
+
+  /* Card Dimensions (Responsive) */
+  --card-w: clamp(82px, 9.5vw, 124px);
+  --card-h: clamp(114px, 13.3vw, 174px);
+  --card-radius: clamp(7px, 0.8vw, 12px);
+  --noble-size: clamp(74px, 8.2vw, 108px);
+  --chip-size: clamp(46px, 5.4vw, 68px);
+}
+
+/* ==========================================================================
+   1. 3D Viewport & Table Canvas
+   ========================================================================== */
+
+.splendor-3d-viewport {
+  position: relative;
+  width: 100%;
+  min-height: 100dvh;
+  perspective: var(--cam-perspective);
+  perspective-origin: 50% 42%;
+  overflow-x: hidden;
+  background-color: var(--velvet-bg);
+  /* Fallback luxury dark radial + NanoBanana table texture */
+  background-image:
+    radial-gradient(ellipse at 50% 35%, rgba(212, 175, 55, 0.12) 0%, rgba(12, 9, 14, 0.88) 78%),
+    url('../assets/bg_table.png'),
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.015) 0px, rgba(255, 255, 255, 0.015) 2px, transparent 2px, transparent 8px),
+    radial-gradient(circle at 50% 50%, #362015 0%, #170e09 100%);
+  background-size: cover, cover, auto, cover;
+  background-position: center;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+.splendor-3d-stage {
+  transform-style: preserve-3d;
+  transform:
+    translate3d(var(--cam-pan-x), var(--cam-pan-y), 0px)
+    scale(var(--cam-zoom))
+    rotateX(var(--cam-pitch))
+    rotateY(var(--cam-yaw));
+  transform-origin: 50% 48% 0px;
+  transition: transform 0.08s linear;
+  will-change: transform;
+}
+
+/* Elevated 3D Board Surface Rim */
+.board-surface-3d {
+  position: relative;
+  transform-style: preserve-3d;
+  border-radius: 18px;
+  background:
+    linear-gradient(145deg, rgba(44, 29, 20, 0.86), rgba(20, 13, 10, 0.92)),
+    url('../assets/bg_table.png') center / cover no-repeat;
+  border: 2px solid rgba(212, 175, 55, 0.42);
+  box-shadow:
+    0 24px 50px rgba(0, 0, 0, 0.78),
+    0 10px 0 #1c1009,
+    0 12px 0 rgba(212, 175, 55, 0.35),
+    inset 0 1px 22px rgba(249, 226, 125, 0.14);
+}
+
+/* ==========================================================================
+   2. 3D Development Cards (Front / Back / Thickness / Flip / Tilt)
+   ========================================================================== */
+
+.card-3d-wrapper {
+  position: relative;
+  width: var(--card-w);
+  height: var(--card-h);
+  perspective: 900px;
+  transform-style: preserve-3d;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.card-3d-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--card-radius);
+  transform-style: preserve-3d;
+  transition:
+    transform 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.3s ease;
+  box-shadow:
+    0 6px 14px rgba(0, 0, 0, 0.55),
+    0 2px 0 #2e2418,
+    0 3px 0 #1b140d;
+  will-change: transform;
+}
+
+.card-3d-wrapper:hover .card-3d-inner,
+.card-3d-wrapper.is-tilting .card-3d-inner {
+  box-shadow:
+    0 18px 30px rgba(0, 0, 0, 0.72),
+    0 4px 0 #4a3923,
+    0 0 16px rgba(249, 226, 125, 0.38);
+}
+
+.card-3d-Inner-flipped,
+.card-3d-inner.is-flipped {
+  transform: rotateY(180deg);
+}
+
+.card-face {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--card-radius);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  overflow: hidden;
+  border: 1.5px solid rgba(212, 175, 55, 0.65);
+}
+
+/* Card Front Face */
+.card-face-front {
+  transform: rotateY(0deg) translateZ(2px);
+  background:
+    linear-gradient(165deg, rgba(255, 252, 242, 0.96) 0%, rgba(235, 224, 200, 0.94) 55%, rgba(214, 196, 165, 0.98) 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 6px;
+}
+
+/* Card Header (Prestige Points + Bonus Gem) */
+.card-3d-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 6px;
+  border-radius: calc(var(--card-radius) - 3px);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.32));
+  backdrop-filter: blur(4px);
+  border-bottom: 1px solid rgba(212, 175, 55, 0.45);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+}
+
+.card-prestige-points {
+  font-family: 'Georgia', 'Times New Roman', serif;
+  font-weight: 900;
+  font-size: clamp(1.1rem, 1.8vw, 1.55rem);
+  line-height: 1;
+  color: #fff;
+  text-shadow:
+    0 1px 0 #8a6d1b,
+    0 2px 4px rgba(0, 0, 0, 0.85),
+    0 0 8px rgba(212, 175, 55, 0.6);
+  -webkit-text-stroke: 0.6px #3b2b0a;
+}
+
+/* Card Cost Badges (Bottom Left Column) */
+.card-3d-costs {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 3px;
+  align-items: flex-start;
+  z-index: 2;
+}
+
+.card-cost-pip {
+  width: clamp(18px, 2.1vw, 25px);
+  height: clamp(18px, 2.1vw, 25px);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: clamp(0.7rem, 0.95vw, 0.9rem);
+  color: #fff;
+  border: 1.5px solid rgba(255, 240, 190, 0.9);
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.65),
+    inset 0 1px 2px rgba(255, 255, 255, 0.55);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95);
+}
+
+/* Card Back Face (Deck Levels I, II, III with Sprite + Fallback) */
+.card-face-back {
+  transform: rotateY(180deg) translateZ(2px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--gold-primary);
+  box-shadow: inset 0 0 0 3px rgba(15, 10, 5, 0.55), inset 0 0 18px rgba(212, 175, 55, 0.45);
+  background-color: #1f2e23;
+  background-image: url('../assets/card_backs.png');
+  background-size: 300% 100%;
+  background-repeat: no-repeat;
+}
+
+.card-face-back.tier-1,
+.deck-3d-stack[data-tier="1"] {
+  background-position: 0% 50%;
+  background-image:
+    url('../assets/card_backs.png'),
+    radial-gradient(circle at 50% 45%, rgba(65, 168, 95, 0.45), rgba(16, 48, 26, 0.96)),
+    repeating-conic-gradient(from 0deg, rgba(212, 175, 55, 0.12) 0deg 15deg, transparent 15deg 30deg);
+}
+
+.card-face-back.tier-2,
+.deck-3d-stack[data-tier="2"] {
+  background-position: 50% 50%;
+  background-image:
+    url('../assets/card_backs.png'),
+    radial-gradient(circle at 50% 45%, rgba(219, 162, 42, 0.48), rgba(66, 42, 8, 0.96)),
+    repeating-conic-gradient(from 0deg, rgba(249, 226, 125, 0.14) 0deg 15deg, transparent 15deg 30deg);
+}
+
+.card-face-back.tier-3,
+.deck-3d-stack[data-tier="3"] {
+  background-position: 100% 50%;
+  background-image:
+    url('../assets/card_backs.png'),
+    radial-gradient(circle at 50% 45%, rgba(56, 120, 214, 0.48), rgba(12, 28, 68, 0.96)),
+    repeating-conic-gradient(from 0deg, rgba(212, 175, 55, 0.14) 0deg 15deg, transparent 15deg 30deg);
+}
+
+/* 3D Deck Stack Extrusion Effect */
+.deck-3d-stack {
+  position: relative;
+  width: var(--card-w);
+  height: var(--card-h);
+  border-radius: var(--card-radius);
+  border: 2px solid var(--gold-primary);
+  transform-style: preserve-3d;
+  cursor: pointer;
+  background-size: 300% 100%, cover, cover;
+  box-shadow:
+    -1px 1px 0 #c9b58c,
+    -2px 2px 0 #8a7754,
+    -3px 3px 0 #c9b58c,
+    -4px 4px 0 #8a7754,
+    -5px 5px 0 #c9b58c,
+    -6px 6px 0 #594b31,
+    -7px 7px 0 #c9b58c,
+    -8px 8px 0 #3d3320,
+    -10px 14px 22px rgba(0, 0, 0, 0.8);
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.25s ease;
+}
+
+.deck-3d-stack:hover {
+  transform: translate3d(2px, -3px, 10px);
+}
+
+/* Interactive Specular Glare Overlay */
+.tilt-glare-layer {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  background: radial-gradient(
+    circle at var(--glare-x, 50%) var(--glare-y, 50%),
+    rgba(255, 250, 220, 0.52) 0%,
+    rgba(255, 255, 255, 0.14) 38%,
+    transparent 70%
+  );
+  mix-blend-mode: overlay;
+}
+
+.is-tilting .tilt-glare-layer,
+.card-3d-wrapper:hover .tilt-glare-layer,
+.noble-tile-3d:hover .tilt-glare-layer {
+  opacity: 1;
+}
+
+/* ==========================================================================
+   3. 3D Gem Poker Chips (Multi-Layered Rim & Ceramic Depth)
+   ========================================================================== */
+
+.gem-chip-3d {
+  position: relative;
+  width: var(--chip-size);
+  height: var(--chip-size);
+  border-radius: 50%;
+  transform-style: preserve-3d;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.22s ease,
+    filter 0.2s ease;
+  /* 3D Stacked Poker Chip Thickness & Rim Stripes */
+  border: 3px dashed rgba(249, 226, 125, 0.85);
+  box-shadow:
+    0 1px 0 #b89328,
+    0 2px 0 #705712,
+    0 3px 0 #9c7a1e,
+    0 4px 0 #523e0a,
+    0 5px 0 #362805,
+    0 9px 16px rgba(0, 0, 0, 0.75),
+    inset 0 2px 5px rgba(255, 255, 255, 0.55),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.65);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.gem-chip-3d::before {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 235, 165, 0.72);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+}
+
+/* Inner Gem Medallion (Sprite + CSS Gradient Fallback) */
+.gem-chip-3d::after {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  border-radius: 50%;
+  background-repeat: no-repeat;
+  background-size: 600% 100%, cover;
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.5),
+    inset 0 2px 4px rgba(255, 255, 255, 0.65);
+  pointer-events: none;
+}
+
+.gem-chip-3d:hover {
+  transform: translate3d(0, -5px, 14px) rotateX(10deg);
+  filter: brightness(1.1);
+  box-shadow:
+    0 2px 0 #b89328,
+    0 4px 0 #705712,
+    0 6px 0 #523e0a,
+    0 15px 24px rgba(0, 0, 0, 0.82),
+    0 0 14px rgba(249, 226, 125, 0.55),
+    inset 0 2px 5px rgba(255, 255, 255, 0.65);
+}
+
+.gem-chip-3d:active {
+  transform: translate3d(0, 2px, 2px);
+}
+
+/* Gem Type Color & Sprite Mapping */
+.gem-chip-3d[data-gem="white"],
+.gem-chip-3d[data-gem="diamond"],
+.card-cost-pip[data-gem="white"],
+.card-cost-pip[data-gem="diamond"] {
+  background: var(--gem-diamond);
+  color: #122636;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+.gem-chip-3d[data-gem="white"]::after,
+.gem-chip-3d[data-gem="diamond"]::after {
+  background-image: url('../assets/gem_tokens.png'), var(--gem-diamond);
+  background-position: 0% 50%, center;
+}
+
+.gem-chip-3d[data-gem="blue"],
+.gem-chip-3d[data-gem="sapphire"],
+.card-cost-pip[data-gem="blue"],
+.card-cost-pip[data-gem="sapphire"] {
+  background: var(--gem-sapphire);
+}
+.gem-chip-3d[data-gem="blue"]::after,
+.gem-chip-3d[data-gem="sapphire"]::after {
+  background-image: url('../assets/gem_tokens.png'), var(--gem-sapphire);
+  background-position: 20% 50%, center;
+}
+
+.gem-chip-3d[data-gem="green"],
+.gem-chip-3d[data-gem="emerald"],
+.card-cost-pip[data-gem="green"],
+.card-cost-pip[data-gem="emerald"] {
+  background: var(--gem-emerald);
+}
+.gem-chip-3d[data-gem="green"]::after,
+.gem-chip-3d[data-gem="emerald"]::after {
+  background-image: url('../assets/gem_tokens.png'), var(--gem-emerald);
+  background-position: 40% 50%, center;
+}
+
+.gem-chip-3d[data-gem="red"],
+.gem-chip-3d[data-gem="ruby"],
+.card-cost-pip[data-gem="red"],
+.card-cost-pip[data-gem="ruby"] {
+  background: var(--gem-ruby);
+}
+.gem-chip-3d[data-gem="red"]::after,
+.gem-chip-3d[data-gem="ruby"]::after {
+  background-image: url('../assets/gem_tokens.png'), var(--gem-ruby);
+  background-position: 60% 50%, center;
+}
+
+.gem-chip-3d[data-gem="black"],
+.gem-chip-3d[data-gem="onyx"],
+.card-cost-pip[data-gem="black"],
+.card-cost-pip[data-gem="onyx"] {
+  background: var(--gem-onyx);
+}
+.gem-chip-3d[data-gem="black"]::after,
+.gem-chip-3d[data-gem="onyx"]::after {
+  background-image: url('../assets/gem_tokens.png'), var(--gem-onyx);
+  background-position: 80% 50%, center;
+}
+
+.gem-chip-3d[data-gem="gold"],
+.gem-chip-3d[data-gem="joker"] {
+  background: var(--gem-gold);
+  border-color: #fff6c2;
+}
+.gem-chip-3d[data-gem="gold"]::after,
+.gem-chip-3d[data-gem="joker"]::after {
+  background-image: url('../assets/gem_tokens.png'), var(--gem-gold);
+  background-position: 100% 50%, center;
+}
+
+/* Chip Stack Count Badge */
+.gem-chip-count {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  z-index: 4;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #2b2113, #0f0b06);
+  border: 1.5px solid var(--gold-bright);
+  color: var(--gold-bright);
+  font-size: 0.76rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.85);
+}
+
+/* ==========================================================================
+   4. 3D Noble Tiles & Stronghold (성채) 3D Tower Badges
+   ========================================================================== */
+
+.noble-tile-3d {
+  position: relative;
+  width: var(--noble-size);
+  height: var(--noble-size);
+  border-radius: 10px;
+  transform-style: preserve-3d;
+  border: 2px solid var(--gold-primary);
+  background-color: #362517;
+  background-image:
+    linear-gradient(180deg, rgba(20, 12, 8, 0.1) 0%, rgba(15, 9, 6, 0.72) 100%),
+    url('../assets/nobles_and_objects.png'),
+    radial-gradient(circle at 50% 35%, #7a5230 0%, #2b1a0e 100%);
+  background-size: cover, 300% 200%, cover;
+  box-shadow:
+    0 3px 0 #6e521b,
+    0 6px 0 #38280b,
+    0 10px 18px rgba(0, 0, 0, 0.72),
+    inset 0 0 12px rgba(249, 226, 125, 0.35);
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s ease;
+  overflow: hidden;
+}
+
+.noble-tile-3d:hover {
+  transform: translate3d(0, -4px, 12px) scale(1.04);
+  box-shadow:
+    0 5px 0 #8a6d1b,
+    0 9px 0 #38280b,
+    0 18px 26px rgba(0, 0, 0, 0.8),
+    0 0 18px rgba(249, 226, 125, 0.55);
+}
+
+/* Stronghold (성채) 3D Tower Badge */
+.stronghold-tower-3d {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: clamp(28px, 3.2vw, 38px);
+  height: clamp(32px, 3.6vw, 44px);
+  transform-style: preserve-3d;
+  border-radius: 6px 6px 10px 10px;
+  border: 1.5px solid var(--gold-bright);
+  background-image:
+    url('../assets/nobles_and_objects.png'),
+    linear-gradient(160deg, #f9e27d 0%, #b88a1e 52%, #593e06 100%);
+  background-size: 400% 200%, cover;
+  background-position: 100% 100%, center;
+  box-shadow:
+    0 2px 0 #6e5211,
+    0 4px 0 #362705,
+    0 6px 12px rgba(0, 0, 0, 0.78),
+    inset 0 2px 3px rgba(255, 255, 255, 0.7);
+  animation: strongholdPulse3D 2.6s ease-in-out infinite;
+}
+
+/* Turret Battlements Crown */
+.stronghold-tower-3d::before {
+  content: '♜';
+  font-size: clamp(1rem, 1.4vw, 1.35rem);
+  line-height: 1;
+  color: #fffdf5;
+  text-shadow:
+    0 1px 0 #5e4307,
+    0 2px 5px rgba(0, 0, 0, 0.9);
+  transform: translateZ(4px);
+}
+
+.stronghold-tower-3d[data-owner="p1"],
+.stronghold-tower-3d.tower-amber {
+  filter: drop-shadow(0 0 6px rgba(255, 196, 54, 0.75));
+}
+
+.stronghold-tower-3d[data-owner="p2"],
+.stronghold-tower-3d.tower-azure {
+  filter: hue-rotate(175deg) drop-shadow(0 0 6px rgba(82, 180, 255, 0.75));
+}
+
+@keyframes strongholdPulse3D {
+  0%, 100% {
+    transform: translateZ(6px) translateY(0px);
+  }
+  50% {
+    transform: translateZ(10px) translateY(-2px);
+  }
+}
+
+/* ==========================================================================
+   5. Physics Particle Layer (Flying Chips & Flipping Cards)
+   ========================================================================== */
+
+.physics-fx-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  perspective: 1200px;
+  overflow: hidden;
+}
+
+.flying-chip-particle {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: var(--chip-size);
+  height: var(--chip-size);
+  border-radius: 50%;
+  pointer-events: none;
+  transform-style: preserve-3d;
+  will-change: transform, opacity;
+  z-index: 10000;
+}
+
+.flying-chip-shadow {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: var(--chip-size);
+  height: var(--chip-size);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0, 0, 0, 0.68) 0%, rgba(0, 0, 0, 0) 72%);
+  pointer-events: none;
+  will-change: transform, opacity;
+  z-index: 9998;
+}
+
+.flying-card-clone {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: var(--card-w);
+  height: var(--card-h);
+  transform-style: preserve-3d;
+  pointer-events: none;
+  will-change: transform;
+  z-index: 10001;
+}
+
+/* ==========================================================================
+   6. Camera HUD Bar (Pitch / Zoom / Reset / Audio Toggle)
+   ========================================================================== */
+
+.cam-3d-hud {
+  position: fixed;
+  bottom: 14px;
+  right: 14px;
+  z-index: 950;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(18, 13, 10, 0.88);
+  border: 1px solid rgba(212, 175, 55, 0.55);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(8px);
+  color: #f5e6c4;
+  font-size: 0.78rem;
+}
+
+.cam-3d-hud button {
+  background: linear-gradient(180deg, #3b2c1a, #1f160c);
+  color: var(--gold-bright);
+  border: 1px solid rgba(212, 175, 55, 0.55);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.cam-3d-hud button:hover {
+  background: linear-gradient(180deg, #523d24, #2e2011);
+  transform: translateY(-1px);
+}
+
+.cam-3d-hud input[type="range"] {
+  width: 74px;
+  accent-color: var(--gold-primary);
+  cursor: pointer;
+}
+
+/* ==========================================================================
+   7. Mobile Portrait & Landscape Touch Optimization
+   ========================================================================== */
+
+@media (max-width: 768px) {
+  :root {
+    --cam-perspective: 1100px;
+    --cam-pitch: 10deg;
+    --card-w: clamp(68px, 19.5vw, 92px);
+    --card-h: clamp(94px, 26.8vw, 128px);
+    --noble-size: clamp(60px, 16.5vw, 80px);
+    --chip-size: clamp(42px, 11.8vw, 54px);
+  }
+
+  .cam-3d-hud {
+    bottom: 8px;
+    right: 8px;
+    padding: 5px 9px;
+    gap: 6px;
+  }
+
+  .cam-3d-hud input[type="range"] {
+    width: 56px;
+  }
+}
+
+@media (max-height: 540px) and (orientation: landscape) {
+  :root {
+    --cam-pitch: 12deg;
+    --card-w: clamp(64px, 10vw, 88px);
+    --card-h: clamp(88px, 13.8vw, 120px);
+    --chip-size: clamp(38px, 6.2vw, 48px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .splendor-3d-stage,
+  .card-3d-inner,
+  .gem-chip-3d,
+  .noble-tile-3d {
+    transition-duration: 0.01s !important;
+    animation: none !important;
+  }
+}

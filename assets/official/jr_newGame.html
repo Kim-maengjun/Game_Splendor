@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Splendor | Create Game</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="./images/favicons/favicon-green-32x32.png" />
+    <link rel="stylesheet" href="styles.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Montserrat&display=swap" rel="stylesheet" />
+    <script src="newGame.js" type="module" defer></script>
+    <script src="/socket.io/socket.io.js"></script>
+  </head>
+  <body>
+    <header class="header"></header>
+    <h1>Create New Game</h1>
+    <div class="user-entry radio-container">
+      <div class="new-game-label">No. of players:</div>
+      <div class="radio-btn">
+        <input type="radio" name="players-count" id="2-radio" value="2" checked />
+        <label for="2-radio">
+          <span>2</span>
+        </label>
+      </div>
+      <div class="radio-btn">
+        <input type="radio" name="players-count" id="3-radio" value="3" />
+        <label for="3-radio">
+          <span>3</span>
+        </label>
+      </div>
+      <div class="radio-btn">
+        <input type="radio" name="players-count" id="4-radio" value="4" />
+        <label for="4-radio">
+          <span>4</span>
+        </label>
+      </div>
+    </div>
+    <div class="user-entry game-info-container">
+      <div>
+        <label for="game-name" class="new-game-label">Name of game:</label>
+        <input type="text" id="game-name" name="game-name" placeholder="(Leave blank for random ID)" />
+      </div>
+      <div>
+        <label for="winning-score" class="new-game-label">Winning Score:</label>
+        <input type="number" id="winning-score" name="winning-score" min="5" max="25" value="15" />
+      </div>
+    </div>
+    <div class="user-entry player-name-container">
+      <div class="new-player-name player-1">
+        <div>
+          <input type="text" placeholder="Player 1 name" id="player-name-1" class="create-player" />
+        </div>
+      </div>
+      <div class="new-player-name player-2">
+        <div>
+          <input type="text" placeholder="Player 2 name" id="player-name-2" class="create-player" />
+        </div>
+      </div>
+    </div>
+    <div class="nav">
+      <a id="create-game-button" href="gameLobby">Create Game</a>
+      <a href="index">Home</a>
+      <a href="savedGames">Saved Games</a>
+    </div>
+  </body>
+</html>

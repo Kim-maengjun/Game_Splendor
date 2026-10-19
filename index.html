@@ -1,0 +1,1723 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>스플렌더 3D: 르네상스 &amp; 오리엔트 에디션 [v1.2.1 | 2026-10-19 23:42]</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💎</text></svg>" />
+  <!-- Google Fonts: Cinzel,Playfair Display, Noto Sans KR -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800;900&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet" />
+  <!-- PeerJS CDN for Multi-Device WebRTC P2P -->
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js" defer></script>
+  <!-- Local Stylesheet if present -->
+  <link rel="stylesheet" href="css/style_3d.css" onerror="this.remove()" />
+  <style>
+    :root {
+      --bg-deep: #0b0e17;
+      --bg-panel: rgba(18, 23, 38, 0.88);
+      --bg-panel-solid: #141a2b;
+      --gold-primary: #f5c542;
+      --gold-light: #ffe484;
+      --gold-dark: #a67c00;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --accent-emerald: #10b981;
+      --accent-sapphire: #3b82f6;
+      --accent-ruby: #ef4444;
+      --accent-diamond: #e5e7eb;
+      --accent-onyx: #374151;
+      --board-tilt: 16deg;
+      --board-scale: 1;
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow-x: hidden;
+      background-color: var(--bg-deep);
+      background-image:
+        radial-gradient(circle at 50% 35%, rgba(25, 33, 58, 0.65), rgba(7, 10, 18, 0.94)),
+        url('assets/playmat_splendor.jpg');
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+      font-family: 'Noto Sans KR', sans-serif;
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ================= TOP HEADER ================= */
+    .top-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 8px 18px;
+      background: linear-gradient(180deg, rgba(12, 16, 28, 0.96) 0%, rgba(18, 24, 42, 0.88) 100%);
+      border-bottom: 1px solid rgba(245, 197, 66, 0.35);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.65);
+      z-index: 100;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .brand-logo {
+      font-family: 'Cinzel', serif;
+      font-size: 1.35rem;
+      font-weight: 900;
+      letter-spacing: 1.5px;
+      background: linear-gradient(135deg, #fff6d1 0%, #f5c542 50%, #c89116 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 2px 10px rgba(245, 197, 66, 0.25);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .version-badge {
+      font-family: 'Noto Sans KR', monospace;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--gold-light);
+      background: rgba(245, 197, 66, 0.14);
+      border: 1px solid rgba(245, 197, 66, 0.45);
+      padding: 3px 9px;
+      border-radius: 999px;
+      letter-spacing: 0.3px;
+    }
+
+    .mode-pill {
+      font-size: 0.76rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: rgba(59, 130, 246, 0.2);
+      border: 1px solid rgba(96, 165, 250, 0.5);
+      color: #93c5fd;
+    }
+
+    .mode-pill.modern {
+      background: rgba(236, 72, 153, 0.2);
+      border-color: rgba(244, 114, 182, 0.55);
+      color: #fbcfe8;
+    }
+
+    .net-status-pill {
+      font-size: 0.75rem;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.45);
+      color: #6ee7b7;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .tilt-slider-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.06);
+      padding: 4px 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      font-size: 0.78rem;
+      color: #d1d5db;
+    }
+
+    .tilt-slider-wrap input[type="range"] {
+      width: 75px;
+      accent-color: var(--gold-primary);
+      cursor: pointer;
+    }
+
+    .hdr-btn {
+      background: linear-gradient(180deg, #252f48 0%, #171e31 100%);
+      color: #f3f4f6;
+      border: 1px solid rgba(245, 197, 66, 0.35);
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.18s ease;
+    }
+
+    .hdr-btn:hover {
+      border-color: var(--gold-primary);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(245, 197, 66, 0.25);
+    }
+
+    .hdr-btn.primary {
+      background: linear-gradient(135deg, #f5c542 0%, #d49b15 100%);
+      color: #111827;
+      border-color: #fde047;
+    }
+
+    /* ================= TURN & AI BANNER ================= */
+    .status-strip {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 18px;
+      background: rgba(15, 20, 34, 0.86);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 0.84rem;
+      gap: 12px;
+      flex-wrap: wrap;
+      z-index: 90;
+    }
+
+    .turn-indicator-box {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+    }
+
+    .turn-dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: var(--gold-primary);
+      box-shadow: 0 0 10px var(--gold-primary);
+      animation: pulseDot 1.4s infinite ease-in-out;
+    }
+
+    @keyframes pulseDot {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.35); opacity: 0.65; }
+    }
+
+    .ai-thinking-bar {
+      color: #fde047;
+      font-weight: 600;
+      font-size: 0.82rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(245, 197, 66, 0.12);
+      padding: 3px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(245, 197, 66, 0.3);
+    }
+
+    /* ================= MAIN 3D WORKSPACE ================= */
+    .main-stage {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 12px;
+      padding: 6px 14px 4px 14px;
+      max-width: 1760px;
+      width: 100%;
+      margin: 0 auto;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    @media (max-width: 1180px) {
+      html, body {
+        height: auto;
+        min-height: 100%;
+        overflow-y: auto;
+      }
+      .main-stage {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        overflow: visible;
+        height: auto;
+      }
+      .board-3d-viewport {
+        transform: none !important;
+        margin: 0;
+        padding: 10px 8px;
+        min-height: auto;
+        height: auto;
+        flex-shrink: 0;
+      }
+    }
+
+    /* 3D Table Surface */
+    .board-3d-viewport {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 5px;
+      min-height: 0;
+      transform: perspective(2200px) rotateX(var(--board-tilt));
+      transform-origin: center center;
+      transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+      padding: 6px 12px;
+      margin: 0 2px;
+      border-radius: 16px;
+      background:
+        linear-gradient(160deg, rgba(16, 23, 40, 0.42) 0%, rgba(9, 13, 24, 0.56) 100%),
+        url('assets/playmat_splendor.jpg') center/cover no-repeat;
+      border: 2px solid rgba(245, 197, 66, 0.55);
+      box-shadow:
+        0 18px 36px rgba(0, 0, 0, 0.78),
+        inset 0 1px 0 rgba(255, 255, 255, 0.22);
+    }
+
+    @media (max-width: 920px) {
+      .board-3d-viewport {
+        transform: none !important;
+        margin: 0;
+        padding: 10px;
+      }
+    }
+
+    /* ================= NOBLES SHELF ================= */
+    .nobles-shelf-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 4px 12px;
+      background: rgba(9, 13, 24, 0.65);
+      border-radius: 12px;
+      border: 1px solid rgba(245, 197, 66, 0.32);
+      flex-wrap: wrap;
+    }
+
+    .shelf-title {
+      font-family: 'Cinzel', serif;
+      font-size: 0.82rem;
+      font-weight: 800;
+      color: var(--gold-light);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .nobles-list {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .noble-item-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      cursor: pointer;
+    }
+
+    .noble-tile {
+      width: clamp(62px, min(5.4vw, 8.2vh), 92px);
+      aspect-ratio: 1 / 1;
+      height: auto;
+      border-radius: 9px;
+      background: linear-gradient(145deg, #2d2246 0%, #171226 100%);
+      background-size: 100% 100% !important;
+      background-position: center !important;
+      background-repeat: no-repeat !important;
+      border: 2.5px solid #e5c158;
+      box-shadow:
+        -2px 3px 0 #785616,
+        0 8px 16px rgba(0, 0, 0, 0.72),
+        inset 0 0 8px rgba(255, 255, 255, 0.25);
+      padding: 3px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: flex-end;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.22s ease;
+    }
+
+    .noble-item-wrap:hover .noble-tile, .noble-tile.highlighted {
+      transform: translateY(-4px) scale(1.05);
+      box-shadow:
+        -2px 5px 0 #b48628,
+        0 12px 22px rgba(245, 197, 66, 0.55),
+        0 0 15px rgba(245, 197, 66, 0.75);
+      border-color: #fff8c4;
+    }
+
+    .noble-external-name {
+      font-size: 0.65rem;
+      color: #fef08a;
+      font-weight: 800;
+      background: rgba(9, 13, 24, 0.88);
+      border: 1px solid rgba(245, 197, 66, 0.45);
+      padding: 1px 6px;
+      border-radius: 999px;
+      max-width: 100px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-align: center;
+      line-height: 1.2;
+    }
+
+    .noble-reqs {
+      display: flex;
+      gap: 2px;
+      flex-wrap: wrap;
+    }
+
+    .noble-req-badge {
+      width: 17px;
+      height: 17px;
+      border-radius: 50%;
+      font-size: 0.64rem;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(255, 255, 255, 0.75);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.65);
+    }
+
+    /* ================= BOARD CENTER: CARDS + GEMS ================= */
+    .board-center-grid {
+      display: grid;
+      grid-template-columns: 1fr 220px;
+      gap: 10px;
+      align-items: stretch;
+      flex: 1;
+      min-height: 0;
+    }
+
+    @media (max-width: 920px) {
+      .board-center-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        height: auto;
+        min-height: auto;
+      }
+    }
+
+    .cards-tiers-column {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-evenly;
+      gap: 4px;
+      width: 100%;
+      min-height: 0;
+    }
+
+    @media (max-width: 920px) {
+      .cards-tiers-column {
+        gap: 8px;
+        height: auto;
+        min-height: auto;
+        flex-shrink: 0;
+      }
+    }
+
+    .tier-row {
+      display: grid;
+      grid-template-columns: repeat(5, clamp(74px, min(9.8vw, 11.2vh), 142px));
+      justify-content: space-evenly;
+      gap: clamp(4px, 0.6vw, 10px);
+      align-items: center;
+      padding: 3px 8px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    @media (max-width: 920px) {
+      .tier-row {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 5px;
+        padding: 5px;
+      }
+    }
+
+    /* 3D Card Deck Stack (Exact 498:693 Official Card Ratio) */
+    .deck-stack-3d {
+      width: 100%;
+      aspect-ratio: 498 / 693;
+      height: auto;
+      border-radius: 10px;
+      position: relative;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 6px;
+      border: 2.5px solid #f9fafb;
+      background-size: 100% 100% !important;
+      background-position: center !important;
+      background-repeat: no-repeat !important;
+      box-shadow:
+        -3px 3px 0 #e5e7eb,
+        -6px 6px 0 #9ca3af,
+        -9px 9px 0 #4b5563,
+        0 14px 24px rgba(0, 0, 0, 0.78);
+      transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.22s ease;
+      text-align: center;
+      overflow: hidden;
+    }
+
+    .deck-stack-3d:hover {
+      transform: translateY(-6px) scale(1.03);
+      border-color: var(--gold-primary);
+      box-shadow:
+        -4px 5px 0 #f3f4f6,
+        -8px 9px 0 #9ca3af,
+        -11px 12px 0 #4b5563,
+        0 18px 28px rgba(245, 197, 66, 0.45);
+    }
+
+    .deck-stack-3d.tier-3 {
+      background-image:
+        linear-gradient(180deg, rgba(8, 12, 24, 0.06) 0%, rgba(8, 12, 24, 0.38) 100%),
+        url('assets/cards/blue-00.jpg');
+    }
+    .deck-stack-3d.tier-2 {
+      background-image:
+        linear-gradient(180deg, rgba(24, 12, 4, 0.06) 0%, rgba(24, 12, 4, 0.38) 100%),
+        url('assets/cards/yellow-00.jpg');
+    }
+    .deck-stack-3d.tier-1 {
+      background-image:
+        linear-gradient(180deg, rgba(4, 20, 14, 0.06) 0%, rgba(4, 20, 14, 0.38) 100%),
+        url('assets/cards/green-00.jpg');
+    }
+
+    .deck-level-dots {
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: #ffffff;
+      background: rgba(0, 0, 0, 0.62);
+      padding: 2px 7px;
+      border-radius: 999px;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+    }
+
+    .deck-title {
+      font-family: 'Cinzel', serif;
+      font-weight: 800;
+      font-size: 0.78rem;
+      color: #fff;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.95);
+      opacity: 0;
+    }
+
+    .deck-count-badge {
+      font-size: 0.74rem;
+      font-weight: 800;
+      background: rgba(8, 12, 22, 0.82);
+      padding: 3px 9px;
+      border-radius: 999px;
+      border: 1px solid rgba(245, 197, 66, 0.65);
+      color: #fde047;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.75);
+    }
+
+    .deck-reserve-hint {
+      font-size: 0.62rem;
+      font-weight: 700;
+      color: #f3f4f6;
+      background: rgba(0, 0, 0, 0.68);
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+
+    /* Splendor Development Card (Exact 498:693 Official Card Scan Ratio, Zero Cropping) */
+    .dev-card {
+      width: 100%;
+      aspect-ratio: 498 / 693;
+      height: auto;
+      border-radius: 10px;
+      position: relative;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 6px 7px;
+      border: 2.5px solid #f3f4f6;
+      background-size: 100% 100% !important;
+      background-position: center !important;
+      background-repeat: no-repeat !important;
+      box-shadow:
+        -2px 3px 0 #cbd5e1,
+        0 10px 22px rgba(0, 0, 0, 0.72);
+      transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.22s ease, border-color 0.2s ease;
+      overflow: hidden;
+    }
+
+    .dev-card:hover {
+      transform: translateY(-8px) scale(1.045);
+      border-color: var(--gold-primary);
+      box-shadow:
+        -2px 5px 0 #fde047,
+        0 18px 32px rgba(0, 0, 0, 0.85),
+        0 0 18px rgba(245, 197, 66, 0.55);
+      z-index: 10;
+    }
+
+    .dev-card.affordable {
+      border-color: #34d399;
+      box-shadow:
+        -2px 3px 0 #10b981,
+        0 10px 20px rgba(0, 0, 0, 0.68),
+        0 0 16px rgba(16, 185, 129, 0.55);
+    }
+
+    .dev-card.hint-recommended {
+      border-color: #fde047 !important;
+      box-shadow: 0 0 22px rgba(250, 204, 21, 0.85) !important;
+      animation: cardPulseHint 1.2s infinite alternate;
+    }
+
+    @keyframes cardPulseHint {
+      from { transform: translateY(-3px) scale(1.01); }
+      to { transform: translateY(-8px) scale(1.05); }
+    }
+
+    /* Card Themes by Gem Bonus */
+    .dev-card.gem-white {
+      background: linear-gradient(155deg, #4b5563 0%, #1f2937 55%, #111827 100%);
+    }
+    .dev-card.gem-blue {
+      background: linear-gradient(155deg, #1d4ed8 0%, #1e3a8a 55%, #0f172a 100%);
+    }
+    .dev-card.gem-green {
+      background: linear-gradient(155deg, #047857 0%, #064e3b 55%, #042f2e 100%);
+    }
+    .dev-card.gem-red {
+      background: linear-gradient(155deg, #b91c1c 0%, #7f1d1d 55%, #2a0a0a 100%);
+    }
+    .dev-card.gem-black {
+      background: linear-gradient(155deg, #374151 0%, #18181b 55%, #09090b 100%);
+    }
+    .dev-card.gem-gold, .dev-card.gem-orient {
+      background: linear-gradient(155deg, #b45309 0%, #78350f 55%, #271206 100%);
+    }
+
+    /* Card Header Bar (Prestige Left, Bonus Gem Right) */
+    .card-top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.14);
+      backdrop-filter: blur(4px);
+      padding: 3px 7px;
+      border-radius: 7px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      z-index: 2;
+    }
+
+    .card-prestige {
+      font-family: 'Cinzel', serif;
+      font-size: 1.25rem;
+      font-weight: 900;
+      color: #ffffff;
+      text-shadow: 0 2px 5px rgba(0, 0, 0, 0.85);
+      line-height: 1;
+    }
+
+    .card-bonus-gem {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .gem-orb-mini {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 900;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.65), inset 0 2px 3px rgba(255, 255, 255, 0.55);
+      border: 1.5px solid rgba(255, 255, 255, 0.8);
+    }
+
+    /* Card Center Art & Ability Badge */
+    .card-center-art {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      my: auto;
+      pointer-events: none;
+    }
+
+    .card-motif-icon {
+      font-size: 1.85rem;
+      opacity: 0.82;
+      filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.7));
+    }
+
+    .card-ability-pill {
+      margin-top: 2px;
+      font-size: 0.63rem;
+      font-weight: 800;
+      padding: 1px 6px;
+      border-radius: 999px;
+      background: rgba(245, 197, 66, 0.25);
+      border: 1px solid rgba(245, 197, 66, 0.75);
+      color: #fef08a;
+      white-space: nowrap;
+    }
+
+    .card-stronghold-marker {
+      position: absolute;
+      top: 36px;
+      right: 6px;
+      background: rgba(0, 0, 0, 0.75);
+      border: 1px solid var(--gold-primary);
+      border-radius: 6px;
+      padding: 1px 5px;
+      font-size: 0.68rem;
+      font-weight: 800;
+      color: #fde047;
+      z-index: 3;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.6);
+    }
+
+    /* Card Bottom area & Inline Center Buy / Bottom-Right Reserve Buttons */
+    .card-bottom-area {
+      display: flex;
+      justify-content: flex-end;
+      align-items: flex-end;
+      z-index: 4;
+      width: 100%;
+    }
+
+    .card-inline-buy-btn {
+      align-self: center;
+      margin: auto 0;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 0.74rem;
+      font-weight: 900;
+      cursor: pointer;
+      border: 2px solid #ffffff;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.85), 0 0 12px rgba(16, 185, 129, 0.75);
+      transition: transform 0.16s ease, opacity 0.16s ease, box-shadow 0.16s ease;
+      z-index: 5;
+      white-space: nowrap;
+    }
+
+    .card-inline-buy-btn:hover:not(:disabled) {
+      transform: scale(1.08);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.92), 0 0 18px rgba(52, 211, 153, 0.95);
+    }
+
+    .card-inline-buy-btn.unaffordable {
+      background: rgba(15, 23, 42, 0.78);
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      color: #e5e7eb;
+      font-size: 0.65rem;
+      padding: 4px 9px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .dev-card:hover .card-inline-buy-btn.unaffordable {
+      opacity: 0.92;
+      pointer-events: auto;
+    }
+
+    .card-inline-reserve-btn {
+      font-size: 0.56rem;
+      font-weight: 900;
+      padding: 2px 5px;
+      border-radius: 5px;
+      border: 1px solid #fde047;
+      background: linear-gradient(135deg, rgba(24, 18, 8, 0.92) 0%, rgba(120, 53, 15, 0.92) 100%);
+      color: #fde047;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.85);
+      transition: transform 0.15s ease, background 0.15s ease;
+      white-space: nowrap;
+      line-height: 1.15;
+    }
+
+    .card-inline-reserve-btn:hover:not(:disabled) {
+      transform: scale(1.07);
+      background: linear-gradient(135deg, #f5c542 0%, #d49b15 100%);
+      color: #111827;
+    }
+
+    .card-inline-reserve-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    .cost-circle {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      font-size: 0.74rem;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1.5px solid rgba(255, 255, 255, 0.75);
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.75);
+    }
+
+    .card-buy-tag {
+      font-size: 0.62rem;
+      font-weight: 800;
+      padding: 2px 5px;
+      border-radius: 4px;
+      background: rgba(16, 185, 129, 0.9);
+      color: #022c22;
+    }
+
+    /* Color Swatches for Gems & Costs */
+    .swatch-white { background: radial-gradient(circle at 30% 30%, #ffffff, #d1d5db 70%, #9ca3af); color: #111827; }
+    .swatch-blue  { background: radial-gradient(circle at 30% 30%, #60a5fa, #2563eb 70%, #1e3a8a); color: #ffffff; }
+    .swatch-green { background: radial-gradient(circle at 30% 30%, #34d399, #059669 70%, #064e3b); color: #ffffff; }
+    .swatch-red   { background: radial-gradient(circle at 30% 30%, #f87171, #dc2626 70%, #7f1d1d); color: #ffffff; }
+    .swatch-black { background: radial-gradient(circle at 30% 30%, #6b7280, #1f2937 70%, #030712); color: #ffffff; }
+    .swatch-gold  { background: radial-gradient(circle at 30% 30%, #fef08a, #eab308 70%, #854d0e); color: #111827; }
+
+    /* ================= GEM BANK & BASKET (CENTER RIGHT) ================= */
+    .gem-bank-panel {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background: rgba(9, 13, 25, 0.8);
+      border: 1px solid rgba(245, 197, 66, 0.28);
+      border-radius: 14px;
+      padding: 10px 12px;
+      gap: 10px;
+    }
+
+    .bank-title {
+      font-family: 'Cinzel', serif;
+      font-size: 0.86rem;
+      font-weight: 800;
+      color: var(--gold-light);
+      text-align: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 6px;
+    }
+
+    .bank-tokens-list {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    @media (max-width: 920px) {
+      .bank-tokens-list {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px;
+      }
+      .deck-level-dots {
+        font-size: 0.56rem;
+        padding: 1px 4px;
+      }
+      .deck-count-badge {
+        font-size: 0.58rem;
+        padding: 1px 5px;
+      }
+      .deck-reserve-hint {
+        font-size: 0.5rem;
+        padding: 1px 3px;
+      }
+    }
+
+    .bank-token-btn {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 7px 10px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      cursor: pointer;
+      transition: all 0.16s ease;
+      position: relative;
+    }
+
+    .bank-token-btn:hover:not(.disabled) {
+      transform: translateX(-3px) scale(1.02);
+      border-color: var(--gold-primary);
+      background: rgba(245, 197, 66, 0.12);
+    }
+
+    .bank-token-btn.disabled {
+      opacity: 0.42;
+      cursor: not-allowed;
+    }
+
+    .token-3d-chip {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 0.85rem;
+      border: 2.5px dashed rgba(245, 197, 66, 0.88);
+      background-size: 76% 76% !important;
+      background-position: center !important;
+      background-repeat: no-repeat !important;
+      box-shadow:
+        0 4px 0 #1f2937,
+        0 7px 0 #111827,
+        0 10px 16px rgba(0, 0, 0, 0.75),
+        inset 0 2px 5px rgba(255, 255, 255, 0.55);
+      transition: transform 0.18s ease;
+    }
+
+    .bank-token-btn:hover:not(.disabled) .token-3d-chip {
+      transform: translateY(-3px) rotate(12deg);
+    }
+
+    .token-info-col {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      flex: 1;
+      margin-left: 9px;
+    }
+
+    .token-kor-name {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #f3f4f6;
+    }
+
+    .token-hotkey-hint {
+      font-size: 0.65rem;
+      color: #9ca3af;
+    }
+
+    .token-count-pill {
+      font-family: 'Cinzel', serif;
+      font-size: 1rem;
+      font-weight: 900;
+      padding: 2px 9px;
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.55);
+      color: #fde047;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    /* Basket Box */
+    .gem-basket-box {
+      background: rgba(20, 28, 48, 0.92);
+      border: 1px solid rgba(245, 197, 66, 0.4);
+      border-radius: 10px;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .basket-title {
+      font-size: 0.74rem;
+      font-weight: 700;
+      color: #d1d5db;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .basket-slots {
+      min-height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      background: rgba(0, 0, 0, 0.35);
+      border-radius: 8px;
+      padding: 4px;
+    }
+
+    .basket-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .basket-btn {
+      flex: 1;
+      padding: 6px 4px;
+      font-size: 0.75rem;
+      font-weight: 800;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+    }
+
+    .basket-btn.confirm {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #fff;
+    }
+    .basket-btn.confirm:disabled {
+      background: #374151;
+      color: #9ca3af;
+      cursor: not-allowed;
+    }
+    .basket-btn.clear {
+      background: rgba(239, 68, 68, 0.2);
+      color: #fca5a5;
+      border: 1px solid rgba(239, 68, 68, 0.4);
+    }
+
+    /* ================= SIDEBAR: PLAYERS DASHBOARD ================= */
+    .players-sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 0;
+      overflow-y: auto;
+    }
+
+    .sidebar-stats-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 10px;
+      background: rgba(12, 17, 30, 0.92);
+      border: 1px solid rgba(245, 197, 66, 0.38);
+      border-radius: 10px;
+      font-size: 0.75rem;
+      color: #fde047;
+      font-weight: 800;
+    }
+
+    .winrate-reset-btn {
+      font-size: 0.68rem;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: rgba(239, 68, 68, 0.22);
+      border: 1px solid rgba(248, 113, 113, 0.55);
+      color: #fecaca;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .winrate-reset-btn:hover {
+      background: rgba(239, 68, 68, 0.42);
+      color: #ffffff;
+    }
+
+    .player-card-panel {
+      background: var(--bg-panel);
+      border: 1.5px solid rgba(255, 255, 255, 0.14);
+      border-radius: 12px;
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      transition: all 0.25s ease;
+      position: relative;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .player-card-panel.active-turn {
+      border: 2px solid var(--gold-primary);
+      box-shadow: 0 0 24px rgba(245, 197, 66, 0.38), inset 0 0 14px rgba(245, 197, 66, 0.1);
+      background: rgba(24, 33, 56, 0.96);
+    }
+
+    .p-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      flex-wrap: nowrap;
+      min-width: 0;
+    }
+
+    .p-name-wrap {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-weight: 800;
+      font-size: 0.78rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .p-name-text {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .p-role-tag {
+      font-size: 0.62rem;
+      padding: 1px 5px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.12);
+      color: #d1d5db;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .p-winrate-pill {
+      font-size: 0.62rem;
+      font-weight: 800;
+      padding: 1px 5px;
+      border-radius: 4px;
+      background: rgba(16, 185, 129, 0.18);
+      border: 1px solid rgba(52, 211, 153, 0.45);
+      color: #6ee7b7;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .p-score-badge {
+      font-family: 'Cinzel', 'Noto Sans KR', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 900;
+      color: var(--gold-light);
+      background: rgba(245, 197, 66, 0.15);
+      border: 1px solid rgba(245, 197, 66, 0.45);
+      padding: 2px 8px;
+      border-radius: 999px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* Player Resource Grid (High-Visibility Color-Coded Gem Tokens & Bonus Cards, Zero Overflow) */
+    .p-resources-grid {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 4px;
+      width: 100%;
+    }
+
+    .p-res-cell {
+      min-width: 0;
+      overflow: hidden;
+      border-radius: 8px;
+      padding: 4px 2px;
+      text-align: center;
+      background: rgba(0, 0, 0, 0.55);
+      border: 1.5px solid rgba(255, 255, 255, 0.22);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15), 0 3px 6px rgba(0, 0, 0, 0.45);
+    }
+
+    .p-res-cell.gem-col-emerald {
+      background: linear-gradient(180deg, rgba(16, 185, 129, 0.34) 0%, rgba(6, 78, 59, 0.72) 100%);
+      border-color: #34d399;
+    }
+    .p-res-cell.gem-col-sapphire {
+      background: linear-gradient(180deg, rgba(59, 130, 246, 0.36) 0%, rgba(30, 58, 138, 0.75) 100%);
+      border-color: #60a5fa;
+    }
+    .p-res-cell.gem-col-ruby {
+      background: linear-gradient(180deg, rgba(239, 68, 68, 0.36) 0%, rgba(127, 29, 29, 0.75) 100%);
+      border-color: #f87171;
+    }
+    .p-res-cell.gem-col-diamond {
+      background: linear-gradient(180deg, rgba(243, 244, 246, 0.32) 0%, rgba(75, 85, 99, 0.75) 100%);
+      border-color: #f9fafb;
+    }
+    .p-res-cell.gem-col-onyx {
+      background: linear-gradient(180deg, rgba(107, 114, 128, 0.34) 0%, rgba(17, 24, 39, 0.88) 100%);
+      border-color: #9ca3af;
+    }
+    .p-res-cell.gem-col-gold {
+      background: linear-gradient(180deg, rgba(245, 197, 66, 0.34) 0%, rgba(120, 53, 15, 0.75) 100%);
+      border-color: #fde047;
+    }
+
+    .p-res-dot {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 2px dashed rgba(255, 255, 255, 0.85);
+      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.65);
+    }
+
+    .p-res-nums {
+      font-size: 0.92rem;
+      font-weight: 900;
+      color: #ffffff;
+      line-height: 1.05;
+      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95);
+    }
+
+    .p-res-bonus {
+      font-size: 0.65rem;
+      font-weight: 900;
+      padding: 1px 3px;
+      border-radius: 4px;
+      background: rgba(0, 0, 0, 0.55);
+      color: #fde047;
+      border: 1px solid rgba(253, 224, 71, 0.45);
+      white-space: nowrap;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Player Reserved Cards & Meta */
+    .p-meta-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.74rem;
+      color: #d1d5db;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .p-reserved-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .mini-reserved-slot {
+      flex: 1;
+      min-width: 78px;
+      height: 54px;
+      border-radius: 7px;
+      border: 1.5px dashed rgba(255, 255, 255, 0.25);
+      background: rgba(0, 0, 0, 0.35);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 7px;
+      font-size: 0.74rem;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .mini-reserved-slot.filled {
+      border-style: solid;
+      border-color: rgba(245, 197, 66, 0.6);
+      background: rgba(30, 41, 59, 0.85);
+    }
+
+    .mini-reserved-slot.filled:hover {
+      transform: translateY(-2px);
+      border-color: #fde047;
+    }
+
+    .privacy-btn {
+      font-size: 0.66rem;
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: rgba(59, 130, 246, 0.25);
+      border: 1px solid rgba(96, 165, 250, 0.5);
+      color: #bfdbfe;
+      cursor: pointer;
+    }
+
+    /* ================= BOTTOM HOTKEY BAR ================= */
+    .hotkey-footer {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 14px;
+      padding: 6px 16px;
+      background: rgba(8, 11, 20, 0.95);
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      font-size: 0.75rem;
+      color: #9ca3af;
+      z-index: 100;
+    }
+
+    .kbd-key {
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: #1f2937;
+      border: 1px solid #4b5563;
+      color: #fde047;
+      font-family: monospace;
+      font-weight: 700;
+      margin-right: 3px;
+    }
+
+    /* ================= MODALS ================= */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(5, 8, 15, 0.82);
+      backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 500;
+      padding: 16px;
+    }
+
+    .modal-backdrop.hidden {
+      display: none !important;
+    }
+
+    .modal-card {
+      background: linear-gradient(165deg, #192136 0%, #0f1524 100%);
+      border: 2px solid rgba(245, 197, 66, 0.55);
+      border-radius: 16px;
+      max-width: 780px;
+      width: 100%;
+      max-height: 92vh;
+      overflow-y: auto;
+      padding: 22px 24px;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85);
+      color: #f3f4f6;
+    }
+
+    .modal-title {
+      font-family: 'Cinzel', serif;
+      font-size: 1.35rem;
+      font-weight: 900;
+      color: var(--gold-light);
+      margin: 0 0 14px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(245, 197, 66, 0.25);
+      padding-bottom: 10px;
+    }
+
+    .setup-section {
+      margin-bottom: 16px;
+    }
+
+    .setup-label {
+      font-size: 0.86rem;
+      font-weight: 800;
+      color: #fde047;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .rule-mode-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    @media (max-width: 640px) {
+      .rule-mode-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .rule-option-card {
+      padding: 12px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 2px solid rgba(255, 255, 255, 0.14);
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+
+    .rule-option-card.selected {
+      border-color: var(--gold-primary);
+      background: rgba(245, 197, 66, 0.14);
+      box-shadow: 0 0 16px rgba(245, 197, 66, 0.25);
+    }
+
+    .rule-option-title {
+      font-weight: 800;
+      font-size: 0.95rem;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+
+    .rule-option-desc {
+      font-size: 0.76rem;
+      color: #d1d5db;
+      line-height: 1.4;
+    }
+
+    .radio-pill-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .radio-pill {
+      padding: 8px 16px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1.5px solid rgba(255, 255, 255, 0.16);
+      font-size: 0.84rem;
+      font-weight: 700;
+      cursor: pointer;
+      color: #e5e7eb;
+    }
+
+    .radio-pill.selected {
+      border-color: var(--gold-primary);
+      background: rgba(245, 197, 66, 0.2);
+      color: #fde047;
+    }
+
+    .slots-config-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .slot-config-row {
+      display: grid;
+      grid-template-columns: 110px 1fr 1fr 1fr;
+      gap: 8px;
+      align-items: center;
+      background: rgba(0, 0, 0, 0.35);
+      padding: 8px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    @media (max-width: 680px) {
+      .slot-config-row {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .slot-config-row select,
+    .slot-config-row input {
+      background: #1f2937;
+      color: #fff;
+      border: 1px solid #4b5563;
+      padding: 6px 8px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-family: inherit;
+    }
+
+    .p2p-room-box {
+      margin-top: 10px;
+      padding: 12px;
+      border-radius: 10px;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .p2p-controls-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .p2p-input {
+      background: #111827;
+      border: 1px solid #10b981;
+      color: #fff;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      width: 140px;
+    }
+
+    /* Toast Notification */
+    .toast-container {
+      position: fixed;
+      bottom: 48px;
+      right: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 1000;
+      pointer-events: none;
+    }
+
+    .toast-item {
+      background: rgba(17, 24, 39, 0.95);
+      border-left: 4px solid var(--gold-primary);
+      color: #f9fafb;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.7);
+      animation: slideInToast 0.25s ease-out;
+    }
+
+    @keyframes slideInToast {
+      from { transform: translateX(40px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ================= TOP HEADER ================= -->
+  <header class="top-header">
+    <div class="brand-group">
+      <div class="brand-logo">
+        <span>💎 SPLENDOR 3D</span>
+      </div>
+      <span class="version-badge" id="versionBadge">[v1.2.1 | 2026-10-19 23:42]</span>
+      <span class="mode-pill" id="activeRuleBadge">전통 룰 (Classic 15점)</span>
+      <div class="net-status-pill" id="netStatusBadge" title="클릭하여 멀티플레이 설정 열기">
+        <span>🟢 로컬 패스 앤 플레이</span>
+      </div>
+    </div>
+
+    <div class="header-controls">
+      <div class="tilt-slider-wrap" title="3D 보드판 입체 기울기 조절 (단축키 V)">
+        <span>📐 3D 각도</span>
+        <input type="range" id="tiltRangeSlider" min="0" max="32" value="16" />
+        <span id="tiltValLabel">16°</span>
+      </div>
+      <button class="hdr-btn" id="btnToggleViewMode" title="평면(0°) / 3D 입체 시점 즉시 전환 (V)">🔄 시점전환(V)</button>
+      <button class="hdr-btn" id="btnAiHint" title="현재 턴 최적 추천 수 분석 (H)">💡 AI 힌트(H)</button>
+      <button class="hdr-btn" id="btnToggleSound" title="효과음 켜기/끄기">🔊 사운드 ON</button>
+      <button class="hdr-btn" id="btnOpenRules" title="전통/최신 확장 룰북 보기">📖 룰북 가이드</button>
+      <button class="hdr-btn primary" id="btnOpenSetup">⚙️ 게임 설정 / 로비</button>
+    </div>
+  </header>
+
+  <!-- ================= STATUS & AI THINKING STRIP ================= -->
+  <section class="status-strip">
+    <div class="turn-indicator-box">
+      <span class="turn-dot"></span>
+      <span id="currentTurnBanner">턴 대기 중...</span>
+      <span id="turnNumberBadge" style="color:#9ca3af; font-size:0.78rem;">(라운드 1)</span>
+    </div>
+    <div class="ai-thinking-bar" id="aiThinkingBox">
+      <span>🧠 상태:</span>
+      <span id="aiThinkingText">플레이어의 행동을 기다리고 있습니다.</span>
+    </div>
+  </section>
+
+  <!-- ================= MAIN 3D GAME WORKSPACE ================= -->
+  <main class="main-stage">
+    <!-- Left/Center 3D Board -->
+    <div class="board-3d-viewport" id="board3dViewport">
+      <!-- Nobles Row -->
+      <div class="nobles-shelf-bar">
+        <div class="shelf-title">
+          <span>👑 왕실 귀족 타일 (조건 달성 시 턴 종료에 자동 방문 · +3점)</span>
+        </div>
+        <div class="nobles-list" id="noblesContainer"></div>
+      </div>
+
+      <!-- Cards Tiers + Gem Bank -->
+      <div class="board-center-grid">
+        <!-- 3 Tiers of Development Cards -->
+        <div class="cards-tiers-column" id="cardsTiersColumn">
+          <!-- Tier 3 -->
+          <div class="tier-row" id="tierRow3"></div>
+          <!-- Tier 2 -->
+          <div class="tier-row" id="tierRow2"></div>
+          <!-- Tier 1 -->
+          <div class="tier-row" id="tierRow1"></div>
+        </div>
+
+        <!-- 6 Gem Tokens Bank & Selection Basket -->
+        <aside class="gem-bank-panel">
+          <div class="bank-title">🏦 3D 보석 은행 (단축키 1~6)</div>
+          <div class="bank-tokens-list" id="bankTokensContainer"></div>
+
+          <div class="gem-basket-box">
+            <div class="basket-title">
+              <span>🧺 선택한 토큰 장바구니</span>
+              <span id="basketRuleHint" style="color:#fde047;">최대 3색 또는 동색 2개</span>
+            </div>
+            <div class="basket-slots" id="basketSlotsContainer">
+              <span style="font-size:0.72rem; color:#6b7280;">우측 보석 클릭 또는 숫자키 1~5</span>
+            </div>
+            <div class="basket-actions">
+              <button class="basket-btn confirm" id="btnConfirmGems" disabled>획득 확정 (Space)</button>
+              <button class="basket-btn clear" id="btnClearGems">취소 (Esc)</button>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <!-- Right Sidebar: 2~4 Players Dashboard -->
+    <aside class="players-sidebar" id="playersSidebarContainer"></aside>
+  </main>
+
+  <!-- ================= KEYBOARD SHORTCUT BAR ================= -->
+  <footer class="hotkey-footer">
+    <span><kbd class="kbd-key">1</kbd>~<kbd class="kbd-key">5</kbd> 보석 토큰 담기</span>
+    <span><kbd class="kbd-key">6</kbd> 황금 조커 안내</span>
+    <span><kbd class="kbd-key">Space</kbd> / <kbd class="kbd-key">Enter</kbd> 선택 토큰 획득 확정</span>
+    <span><kbd class="kbd-key">V</kbd> 2D/3D 시점 전환</span>
+    <span><kbd class="kbd-key">H</kbd> AI 추천 힌트</span>
+    <span><kbd class="kbd-key">Esc</kbd> 선택/모달 닫기</span>
+  </footer>
+
+  <!-- ================= MODAL 1: GAME SETUP & MULTIPLAYER LOBBY ================= -->
+  <div class="modal-backdrop" id="setupModalBackdrop">
+    <div class="modal-card">
+      <div class="modal-title">
+        <span>👑 스플렌더 3D 대시보드 &amp; 멀티플레이 로비</span>
+        <button class="hdr-btn" id="btnCloseSetupModal">닫기 ✕</button>
+      </div>
+
+      <!-- 1. Rule Mode Selection -->
+      <div class="setup-section">
+        <span class="setup-label">1. 게임 룰 모드 선택 (전통 오리지널 vs 최신 확장 룰)</span>
+        <div class="rule-mode-grid">
+          <div class="rule-option-card selected" data-rule="classic" id="ruleCardClassic">
+            <div class="rule-option-title">🏛️ 전통 룰 (Classic Rules - 오리지널 15점)</div>
+            <div class="rule-option-desc">
+              정통 스플렌더 기본 규칙입니다. 보석 토큰 수집, 개발 카드 구매 및 예약, 귀족 방문을 통해 가장 먼저 <strong>15점</strong>에 도달하면 최종 라운드 후 승리합니다.
+            </div>
+          </div>
+          <div class="rule-option-card" data-rule="modern" id="ruleCardModern">
+            <div class="rule-option-title">🏯 최신 확장 룰 (Modern Rules - 성채 거점 + 동양 특수능력)</div>
+            <div class="rule-option-desc">
+              <strong>성채(Stronghold) 타워 3개</strong> 배치 및 상대 성채 파괴/선점 독점 구매 + <strong>동양의 무역로 특수능력</strong>(쌍보석, 2골드, 공짜 연쇄 구매, 보석 약탈, 귀족 예약)이 결합된 전략 모드!
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Player Count Selection -->
+      <div class="setup-section">
+        <span class="setup-label">2. 플레이어 인원 수 선택</span>
+        <div class="radio-pill-group" id="playerCountGroup">
+          <div class="radio-pill selected" data-count="2">👥 2인 대전 (보석 4개 · 귀족 3장)</div>
+          <div class="radio-pill" data-count="3">👥 3인 대전 (보석 5개 · 귀족 4장)</div>
+          <div class="radio-pill" data-count="4">👥 4인 대전 (보석 7개 · 귀족 5장)</div>
+        </div>
+      </div>
+
+      <!-- 3. Multiplayer Mode when Human is selected -->
+      <div class="setup-section">
+        <span class="setup-label">3. 사람(Human) 멀티플레이 연동 방식</span>
+        <div class="radio-pill-group" id="netModeGroup">
+          <div class="radio-pill selected" data-net="local">📱 한 기기에서 함께 (Pass &amp; Play · 예약 카드 보호)</div>
+          <div class="radio-pill" data-net="online">🌐 여러 PC / 스마트폰 실시간 연동 (P2P 방 만들기 &amp; 다중 탭 동기화)</div>
+        </div>
+
+        <!-- P2P Room Sub-panel -->
+        <div class="p2p-room-box" id="p2pConfigPanel" style="display:none;">
+          <div style="font-size:0.8rem; color:#a7f3d0; font-weight:700;">
+            📡 서버 설치 없이 방 코드 하나로 다른 PC, 스마트폰 또는 현재 브라우저의 다른 탭과 즉시 실시간 연동됩니다!
+          </div>
+          <div class="p2p-controls-row">
+            <button class="hdr-btn primary" id="btnCreateRoom">🏠 새 P2P 방 만들기 (Host)</button>
+            <input type="text" class="p2p-input" id="inputRoomCode" placeholder="SPL-4829" />
+            <button class="hdr-btn" id="btnJoinRoom">🔗 방 코드로 참가 (Client)</button>
+            <button class="hdr-btn" id="btnCopyInvite">📋 초대링크 복사</button>
+          </div>
+          <div id="p2pStatusText" style="font-size:0.78rem; color:#fde047;">
+            현재 상태: 방 생성 또는 코드 입력 대기 중
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Player Slots Configuration -->
+      <div class="setup-section">
+        <span class="setup-label">4. 슬롯별 참가자 세부 설정 (사람 vs PC 인공지능 난이도)</span>
+        <div class="slots-config-list" id="slotsConfigContainer"></div>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:18px;">
+        <button class="hdr-btn primary" id="btnStartNewGame" style="padding:10px 24px; font-size:0.95rem;">
+          🚀 선택한 설정으로 새 게임 시작
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL 2: CARD ACTION (BUY / RESERVE / STRONGHOLD) ================= -->
+  <div class="modal-backdrop hidden" id="cardActionModalBackdrop">
+    <div class="modal-card" style="max-width:480px;">
+      <div class="modal-title">
+        <span id="cardModalTitle">카드 액션 선택</span>
+        <button class="hdr-btn" id="btnCloseCardModal">닫기 ✕</button>
+      </div>
+      <div id="cardModalBody" style="display:flex; flex-direction:column; gap:12px;"></div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL 3: TOKEN LIMIT (>10) RETURN MODAL ================= -->
+  <div class="modal-backdrop hidden" id="tokenReturnModalBackdrop">
+    <div class="modal-card" style="max-width:480px;">
+      <div class="modal-title">
+        <span>⚠️ 보석 토큰 보유 한도(10개) 초과 반납</span>
+      </div>
+      <p style="font-size:0.84rem; color:#d1d5db; margin-top:0;">
+        보유한 보석 토큰이 10개를 초과했습니다. 반납할 보석을 클릭하여 정확히 <strong>10개</strong>로 맞춰주세요.
+      </p>
+      <div id="tokenReturnBody" style="display:flex; flex-direction:column; gap:12px;"></div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL 4: RULEBOOK & VICTORY MODAL ================= -->
+  <div class="modal-backdrop hidden" id="infoModalBackdrop">
+    <div class="modal-card" style="max-width:640px;">
+      <div class="modal-title">
+        <span id="infoModalTitle">📖 스플렌더 3D 룰북 가이드</span>
+        <button class="hdr-btn" id="btnCloseInfoModal">닫기 ✕</button>
+      </div>
+      <div id="infoModalBody" style="font-size:0.85rem; line-height:1.6; color:#e5e7eb;"></div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Core Scripts (Order: rules_data -> ai_engine -> physics_3d -> multiplayer -> app) -->
+  <script src="js/rules_data.js"></script>
+  <script src="js/ai_engine.js"></script>
+  <script src="js/physics_3d.js"></script>
+  <script src="js/multiplayer.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
