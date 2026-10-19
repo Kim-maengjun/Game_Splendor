@@ -493,12 +493,6 @@
     canControlPlayer(playerIndex, playerObj) {
       if (!playerObj || playerObj.isAI) return false;
       if (this.mode === 'local') return true;
-      if (this.mode === 'online_client') {
-        return this.mySlotIndex === playerIndex || playerIndex > 0;
-      }
-      if (this.mode === 'online_host') {
-        return true;
-      }
       return this.mySlotIndex === playerIndex;
     }
 

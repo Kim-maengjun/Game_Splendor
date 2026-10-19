@@ -6,13 +6,13 @@
  * - window.SplendorPhysics3D (physics_3d.js)
  * - window.SplendorNet (multiplayer.js)
  *
- * Build Version: [v1.2.2 | 2026-10-20 00:22]
+ * Build Version: [v1.2.3 | 2026-10-20 01:20]
  */
 
 (function (global) {
   'use strict';
 
-  const APP_VERSION = '[v1.2.2 | 2026-10-20 00:22]';
+  const APP_VERSION = '[v1.2.3 | 2026-10-20 01:20]';
   const WIN_STATS_STORAGE_KEY = 'splendor_win_stats_v1';
 
   // Gem key mapping & UI helpers
@@ -401,7 +401,10 @@
       });
 
       global.SplendorNet.on('onStateSync', (remoteState, meta) => {
-        // Client receives updated state from Host
+        // Client receives updated state from Host (first play 3D flying animations on old DOM before re-rendering!)
+        if (meta && meta.animFx) {
+          this._replaySyncedAnimationFX(meta.animFx, false);
+        }
         this.state = remoteState;
         this.gemBasket = [];
         document.getElementById('setupModalBackdrop').classList.add('hidden');
@@ -409,23 +412,70 @@
           this.showToast(meta.toast);
         }
         this.renderAll();
+        if (meta && meta.animFx && meta.animFx.dealAnim && global.SplendorPhysics3D) {
+          const { level, slotIdx, cardObj } = meta.animFx.dealAnim;
+          const deckEl = document.querySelector(`.deck-stack-3d[data-tier="${level}"]`);
+          const slotEl = document.querySelector(`.dev-card[data-level="${level}"][data-slot-idx="${slotIdx}"]`);
+          if (deckEl && slotEl) {
+            global.SplendorPhysics3D.animateCardFlipAndMove(deckEl, slotEl, cardObj);
+          }
+        }
       });
 
       global.SplendorNet.on('onActionReceived', (actionObj, slotIndex) => {
-        // Host receives action from a remote Client
+        // Host receives action from a remote Client — strictly enforce slotIndex === currentPlayerIndex
         if (global.SplendorNet.mode !== 'online_host' || !this.state) return;
         const activeIdx = this.state.currentPlayerIndex;
-        // Accept action if it matches active turn or if client is acting for current non-host human turn
-        if (slotIndex !== activeIdx && activeIdx === 0) {
+        if (slotIndex !== activeIdx) {
           return;
         }
         this.executeAction(actionObj, activeIdx);
       });
     }
 
-    _broadcastAuthoritativeState(toastMsg = null) {
+    _replaySyncedAnimationFX(animFx) {
+      if (!animFx || !global.SplendorPhysics3D) return;
+      const pIdx = animFx.playerIndex;
+      const playerPanelEl = document.querySelector(`.player-card-panel[data-player-idx="${pIdx}"]`);
+
+      if (animFx.sound === 'chip') {
+        this._playChipSound();
+      } else if (animFx.sound === 'card') {
+        this._playCardFlipSound();
+      }
+      if (animFx.nobleVisited) {
+        this._playNobleFanfare();
+      }
+
+      (animFx.chipsToPlayer || []).forEach((item) => {
+        const bankEl = document.querySelector(`.bank-token-btn[data-bank-gem="${item.gem}"]`);
+        global.SplendorPhysics3D.animateChipTransfer(bankEl, playerPanelEl, item.gem, item.count);
+      });
+
+      (animFx.chipsToBank || []).forEach((item) => {
+        const bankEl = document.querySelector(`.bank-token-btn[data-bank-gem="${item.gem}"]`);
+        global.SplendorPhysics3D.animateChipTransfer(playerPanelEl, bankEl, item.gem, item.count);
+      });
+
+      if (animFx.cardTake) {
+        const { fromType, cardId, level, cardObj, isBlind } = animFx.cardTake;
+        let fromEl = null;
+        if (fromType === 'deck') {
+          fromEl = document.querySelector(`.deck-stack-3d[data-tier="${level}"]`);
+        } else if (fromType === 'reserved') {
+          fromEl = document.querySelector(`.mini-reserved-slot[data-reserved-card-id="${cardId}"]`) || playerPanelEl;
+        } else {
+          fromEl = document.querySelector(`.dev-card[data-card-id="${cardId}"]`);
+        }
+        if (fromEl && playerPanelEl && global.SplendorPhysics3D.animateCardTakeToPlayer) {
+          global.SplendorPhysics3D.animateCardTakeToPlayer(fromEl, playerPanelEl, cardObj, isBlind);
+        }
+      }
+    }
+
+    _broadcastAuthoritativeState(toastMsg = null, animFx = null) {
       if (global.SplendorNet && global.SplendorNet.mode === 'online_host' && this.state) {
-        global.SplendorNet.broadcastState(this.state, { toast: toastMsg });
+        global.SplendorNet.broadcastState(this.state, { toast: toastMsg, animFx });
       }
     }
 
@@ -557,12 +607,19 @@
       const curIdx = this.state.currentPlayerIndex;
 
       if (global.SplendorNet && global.SplendorNet.mode === 'online_client') {
-        if (curIdx === 0 && global.SplendorNet.mySlotIndex !== 0) {
-          this.showToast('아직 방장(P1)의 턴입니다! 방장이 턴을 마치면 자동으로 넘어옵니다.');
+        if (global.SplendorNet.mySlotIndex !== curIdx) {
+          this.showToast(`현재 P${curIdx + 1}의 턴입니다! 내 차례(P${global.SplendorNet.mySlotIndex + 1})를 기다려 주세요.`);
           return;
         }
         global.SplendorNet.sendAction(actionObj, curIdx);
         return;
+      }
+
+      if (global.SplendorNet && global.SplendorNet.mode === 'online_host') {
+        if (global.SplendorNet.mySlotIndex !== curIdx) {
+          this.showToast(`현재 P${curIdx + 1}(상대방)의 턴입니다! 상대방의 행동을 기다려 주세요.`);
+          return;
+        }
       }
 
       this.executeAction(actionObj, curIdx);
@@ -575,6 +632,15 @@
 
       const { actionType, payload } = actionObj;
       let actionSummary = '';
+      const syncAnimFx = {
+        playerIndex,
+        sound: null,
+        chipsToPlayer: [],
+        chipsToBank: [],
+        cardTake: null,
+        dealAnim: null,
+        nobleVisited: false
+      };
 
       if (actionType === 'TAKE_TOKENS') {
         const tokensObj = payload.tokens || {};
@@ -585,9 +651,12 @@
             const actual = Math.min(amt, this.state.bankTokens[gem] || 0);
             this.state.bankTokens[gem] -= actual;
             player.tokens[gem] = (player.tokens[gem] || 0) + actual;
-            if (actual > 0 && global.SplendorPhysics3D) {
-              const bankEl = document.querySelector(`.bank-token-btn[data-bank-gem="${gem}"]`);
-              global.SplendorPhysics3D.animateChipTransfer(bankEl, playerPanelEl, gem, actual);
+            if (actual > 0) {
+              syncAnimFx.chipsToPlayer.push({ gem, count: actual });
+              if (global.SplendorPhysics3D) {
+                const bankEl = document.querySelector(`.bank-token-btn[data-bank-gem="${gem}"]`);
+                global.SplendorPhysics3D.animateChipTransfer(bankEl, playerPanelEl, gem, actual);
+              }
             }
           }
         }
@@ -597,6 +666,7 @@
           if (retAmt > 0 && (player.tokens[gem] || 0) >= retAmt) {
             player.tokens[gem] -= retAmt;
             this.state.bankTokens[gem] += retAmt;
+            syncAnimFx.chipsToBank.push({ gem, count: retAmt });
             if (global.SplendorPhysics3D) {
               const bankEl = document.querySelector(`.bank-token-btn[data-bank-gem="${gem}"]`);
               global.SplendorPhysics3D.animateChipTransfer(playerPanelEl, bankEl, gem, retAmt);
@@ -609,6 +679,7 @@
           .map(([k, v]) => `${GEM_UI_META[k].kor} ${v}개`)
           .join(', ');
         actionSummary = `${player.name}: 보석 획득 (${takenNames})`;
+        syncAnimFx.sound = 'chip';
         this._playChipSound();
       } else if (actionType === 'RESERVE_CARD') {
         if (player.reservedCards.length >= 3) {
@@ -627,6 +698,7 @@
           if (idx !== -1) {
             targetCard = row[idx];
             replacedSlotIdx = idx;
+            syncAnimFx.cardTake = { fromType: 'board', cardId: payload.cardId, level, cardObj: targetCard, isBlind: false };
             const oldCardEl = document.querySelector(`.dev-card[data-card-id="${payload.cardId}"]`);
             if (oldCardEl && global.SplendorPhysics3D && global.SplendorPhysics3D.animateCardTakeToPlayer) {
               global.SplendorPhysics3D.animateCardTakeToPlayer(oldCardEl, playerPanelEl, targetCard, false);
@@ -639,6 +711,7 @@
         } else if (this.state.decks[level] && this.state.decks[level].length > 0) {
           targetCard = this.state.decks[level].shift();
           targetCard.reservedFromDeck = true;
+          syncAnimFx.cardTake = { fromType: 'deck', cardId: targetCard.id, level, cardObj: targetCard, isBlind: true };
           const deckEl = document.querySelector(`.deck-stack-3d[data-tier="${level}"]`);
           if (deckEl && global.SplendorPhysics3D && global.SplendorPhysics3D.animateCardTakeToPlayer) {
             global.SplendorPhysics3D.animateCardTakeToPlayer(deckEl, playerPanelEl, targetCard, true);
@@ -656,6 +729,7 @@
           this.state.bankTokens.gold -= 1;
           player.tokens.gold = (player.tokens.gold || 0) + 1;
           gotGold = true;
+          syncAnimFx.chipsToPlayer.push({ gem: 'gold', count: 1 });
           if (global.SplendorPhysics3D) {
             const goldBankEl = document.querySelector('.bank-token-btn[data-bank-gem="gold"]');
             global.SplendorPhysics3D.animateChipTransfer(goldBankEl, playerPanelEl, 'gold', 1);
@@ -664,6 +738,7 @@
 
         if (replacementCard && replacedSlotIdx >= 0) {
           this._pendingDealAnim = { level, slotIdx: replacedSlotIdx, cardObj: replacementCard };
+          syncAnimFx.dealAnim = { level, slotIdx: replacedSlotIdx, cardObj: replacementCard };
         }
 
         const returnTokens = payload.returnTokens || {};
@@ -672,10 +747,12 @@
           if (retAmt > 0 && (player.tokens[gem] || 0) >= retAmt) {
             player.tokens[gem] -= retAmt;
             this.state.bankTokens[gem] += retAmt;
+            syncAnimFx.chipsToBank.push({ gem, count: retAmt });
           }
         }
 
         actionSummary = `${player.name}: 레벨 ${targetCard.level} 카드 예약${gotGold ? ' + 황금(조커) 1개 획득' : ''}`;
+        syncAnimFx.sound = 'card';
         this._playCardFlipSound();
       } else if (actionType === 'BUY_CARD') {
         const { cardId, source, strongholdAction } = payload;
@@ -730,6 +807,14 @@
           return;
         }
 
+        syncAnimFx.cardTake = {
+          fromType: source === 'reserved' ? 'reserved' : 'board',
+          cardId: card.id,
+          level: card.level,
+          cardObj: card,
+          isBlind: false
+        };
+
         // Animate card flying from board/reserved slot to player
         if (global.SplendorPhysics3D && global.SplendorPhysics3D.animateCardTakeToPlayer) {
           const fromCardEl =
@@ -748,6 +833,7 @@
           if (payAmt > 0) {
             player.tokens[gem] -= payAmt;
             this.state.bankTokens[gem] += payAmt;
+            syncAnimFx.chipsToBank.push({ gem, count: payAmt });
             if (global.SplendorPhysics3D) {
               const bankEl = document.querySelector(`.bank-token-btn[data-bank-gem="${gem}"]`);
               global.SplendorPhysics3D.animateChipTransfer(playerPanelEl, bankEl, gem, payAmt);
@@ -762,6 +848,7 @@
           this.state.boardCards[boardLevel][boardIdx] = replacement;
           if (replacement) {
             this._pendingDealAnim = { level: boardLevel, slotIdx: boardIdx, cardObj: replacement };
+            syncAnimFx.dealAnim = { level: boardLevel, slotIdx: boardIdx, cardObj: replacement };
           }
         }
 
@@ -780,10 +867,13 @@
         }
 
         actionSummary = `${player.name}: [${card.themeTitle}] 구매 (+${card.points}점)${abilityNote}`;
+        syncAnimFx.sound = 'card';
         this._playCardFlipSound();
       } else if (actionType === 'PASS') {
         actionSummary = `${player.name}: 턴을 넘겼습니다.`;
       }
+
+      this._lastSyncAnimFx = syncAnimFx;
 
       if (actionObj.reasonText) {
         this.state.lastActionText = `🤖 [${player.name}] ${actionObj.reasonText}`;
@@ -907,6 +997,7 @@
           this.state.nobles.splice(nIdx, 1);
           player.nobles.push(chosenNoble);
           player.points += chosenNoble.points || 3;
+          if (this._lastSyncAnimFx) this._lastSyncAnimFx.nobleVisited = true;
           this._playNobleFanfare();
           this.showToast(`👑 귀족 [${chosenNoble.korName}]님이 ${player.name}님을 방문했습니다! (+3점)`);
         }
@@ -938,7 +1029,9 @@
         global.SplendorNet.togglePrivacyShield(false);
       }
 
-      this._broadcastAuthoritativeState();
+      const animFxToBroadcast = this._lastSyncAnimFx || null;
+      this._lastSyncAnimFx = null;
+      this._broadcastAuthoritativeState(null, animFxToBroadcast);
       this.renderAll();
       this._checkAndScheduleAITurn();
     }

@@ -424,8 +424,21 @@
   }
 
   /* ==========================================================================
-     3. Particle FX Layer Management
+     3. Particle FX Layer Management & Mobile Touch Audio Unlock
      ========================================================================== */
+  function setupMobileAudioUnlock() {
+    const unlock = () => {
+      SoundFX.init();
+      if (SoundFX.ctx && SoundFX.ctx.state === 'suspended') {
+        SoundFX.ctx.resume().catch(() => {});
+      }
+    };
+    ['touchstart', 'touchend', 'pointerdown', 'click'].forEach((evt) => {
+      global.addEventListener(evt, unlock, { passive: true, once: false });
+    });
+  }
+  setupMobileAudioUnlock();
+
   function getFXLayer() {
     let layer = document.querySelector('.physics-fx-layer');
     if (!layer) {
@@ -442,9 +455,14 @@
     }
     if (typeof elOrCoords.getBoundingClientRect === 'function') {
       const rect = elOrCoords.getBoundingClientRect();
+      const rawX = rect.left + rect.width * 0.5;
+      const rawY = rect.top + rect.height * 0.5;
+      // On mobile portrait, if player panel is scrolled below the screen, clamp Y into the visible bottom area so the 3D flying animation is clearly seen!
+      const clampedX = Math.max(32, Math.min(global.innerWidth - 32, rawX));
+      const clampedY = Math.max(48, Math.min(global.innerHeight - 54, rawY));
       return {
-        x: rect.left + rect.width * 0.5,
-        y: rect.top + rect.height * 0.5,
+        x: clampedX,
+        y: clampedY,
         width: rect.width || 56,
         height: rect.height || 56
       };
