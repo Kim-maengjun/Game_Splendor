@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>스플렌더 3D: 르네상스 &amp; 오리엔트 에디션 [v1.2.3 | 2026-10-20 01:20]</title>
+  <title>스플렌더 3D: 르네상스 &amp; 오리엔트 에디션 [v1.2.4 | 2026-10-20 07:35]</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💎</text></svg>" />
   <!-- Google Fonts: Cinzel,Playfair Display, Noto Sans KR -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -1204,6 +1204,40 @@
       text-overflow: ellipsis;
     }
 
+    .p-return-banner {
+      background: linear-gradient(90deg, rgba(220, 38, 38, 0.92), rgba(153, 27, 27, 0.92));
+      border: 1.5px solid #fca5a5;
+      color: #ffffff;
+      font-size: 0.72rem;
+      font-weight: 900;
+      padding: 4px 8px;
+      border-radius: 7px;
+      text-align: center;
+      box-shadow: 0 0 12px rgba(239, 68, 68, 0.65);
+      animation: returnBannerPulse 0.9s infinite alternate;
+    }
+
+    @keyframes returnBannerPulse {
+      from { transform: scale(1); }
+      to { transform: scale(1.015); }
+    }
+
+    .p-res-cell.returnable {
+      cursor: pointer;
+      outline: 2px solid #f87171;
+      animation: returnCellPulse 0.75s infinite alternate;
+    }
+
+    .p-res-cell.returnable:hover {
+      transform: translateY(-2px) scale(1.04);
+      outline-color: #fde047;
+    }
+
+    @keyframes returnCellPulse {
+      from { box-shadow: 0 0 6px rgba(248, 113, 113, 0.5); }
+      to { box-shadow: 0 0 14px rgba(253, 224, 71, 0.9); }
+    }
+
     /* Player Reserved Cards & Meta */
     .p-meta-bar {
       display: flex;
@@ -1505,7 +1539,7 @@
       <div class="brand-logo">
         <span>💎 SPLENDOR 3D</span>
       </div>
-      <span class="version-badge" id="versionBadge">[v1.2.3 | 2026-10-20 01:20]</span>
+      <span class="version-badge" id="versionBadge">[v1.2.4 | 2026-10-20 07:35]</span>
       <span class="mode-pill" id="activeRuleBadge">전통 룰 (Classic 15점)</span>
       <div class="net-status-pill" id="netStatusBadge" title="클릭하여 멀티플레이 설정 열기">
         <span>🟢 로컬 패스 앤 플레이</span>

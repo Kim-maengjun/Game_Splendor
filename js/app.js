@@ -6,13 +6,13 @@
  * - window.SplendorPhysics3D (physics_3d.js)
  * - window.SplendorNet (multiplayer.js)
  *
- * Build Version: [v1.2.3 | 2026-10-20 01:20]
+ * Build Version: [v1.2.4 | 2026-10-20 07:35]
  */
 
 (function (global) {
   'use strict';
 
-  const APP_VERSION = '[v1.2.3 | 2026-10-20 01:20]';
+  const APP_VERSION = '[v1.2.4 | 2026-10-20 07:35]';
   const WIN_STATS_STORAGE_KEY = 'splendor_win_stats_v1';
 
   // Gem key mapping & UI helpers
@@ -563,6 +563,7 @@
         isFinalRound: false,
         gameOver: false,
         winnerIndex: null,
+        pendingTokenReturn: false,
         lastActionText: '새 게임이 시작되었습니다! 보석 토큰을 모으거나 개발 카드를 구매하세요.'
       };
 
@@ -605,6 +606,11 @@
     dispatchPlayerAction(actionObj) {
       if (!this.state || this.state.gameOver) return;
       const curIdx = this.state.currentPlayerIndex;
+
+      if (this.state.pendingTokenReturn && actionObj.actionType !== 'RETURN_ONE_TOKEN') {
+        this.showToast('⚠️ 보유 토큰이 10개를 초과했습니다! 내 플레이어 패널에서 반납할 보석을 먼저 클릭해 주세요.');
+        return;
+      }
 
       if (global.SplendorNet && global.SplendorNet.mode === 'online_client') {
         if (global.SplendorNet.mySlotIndex !== curIdx) {
@@ -869,6 +875,20 @@
         actionSummary = `${player.name}: [${card.themeTitle}] 구매 (+${card.points}점)${abilityNote}`;
         syncAnimFx.sound = 'card';
         this._playCardFlipSound();
+      } else if (actionType === 'RETURN_ONE_TOKEN') {
+        const gem = payload && payload.gem;
+        if (!gem || (player.tokens[gem] || 0) <= 0) return;
+        player.tokens[gem] -= 1;
+        this.state.bankTokens[gem] = (this.state.bankTokens[gem] || 0) + 1;
+        syncAnimFx.chipsToBank.push({ gem, count: 1 });
+        syncAnimFx.sound = 'chip';
+        if (global.SplendorPhysics3D) {
+          const playerPanelEl = document.querySelector(`.player-card-panel[data-player-idx="${playerIndex}"]`);
+          const bankEl = document.querySelector(`.bank-token-btn[data-bank-gem="${gem}"]`);
+          global.SplendorPhysics3D.animateChipTransfer(playerPanelEl, bankEl, gem, 1);
+        }
+        this._playChipSound(1);
+        actionSummary = `${player.name}: 초과 보석 [${GEM_UI_META[gem].kor}] 1개 반납`;
       } else if (actionType === 'PASS') {
         actionSummary = `${player.name}: 턴을 넘겼습니다.`;
       }
@@ -884,13 +904,19 @@
       this.gemBasket = [];
       this.recommendedCardId = null;
 
-      // Check if human player exceeds 10 tokens (if AI, AI already calculated returnTokens)
+      // Check if human player exceeds 10 tokens -> inline return on player panel (no popup modal)
       const totalTokens = this._getPlayerTotalTokens(player);
       if (totalTokens > 10 && !player.isAI) {
+        const excess = totalTokens - 10;
+        this.state.pendingTokenReturn = true;
+        this.state.lastActionText = `⚠️ [${player.name}] 보유 토큰 초과 (${totalTokens}/10개) — 내 패널에서 반납할 보석을 클릭해 ${excess}개 반납하세요!`;
+        this.showToast(`⚠️ 보유 토큰이 ${totalTokens}개입니다! 내 플레이어 패널에서 보석 ${excess}개를 클릭하여 반납해 주세요.`);
+        this._broadcastAuthoritativeState(this.state.lastActionText, this._lastSyncAnimFx);
         this.renderAll();
-        this._openTokenReturnModal(playerIndex);
         return;
       }
+
+      this.state.pendingTokenReturn = false;
 
       // If AI somehow exceeded 10 tokens, auto-trim excess
       if (totalTokens > 10 && player.isAI) {
@@ -1104,6 +1130,10 @@
     addGemToBasket(gemKey) {
       if (!this._canLocalUserActNow()) {
         this.showToast('현재 당신의 차례가 아닙니다.');
+        return;
+      }
+      if (this.state.pendingTokenReturn) {
+        this.showToast('⚠️ 보유 토큰이 10개를 초과했습니다! 내 플레이어 패널에서 반납할 보석을 먼저 클릭해 주세요.');
         return;
       }
       if (gemKey === 'gold') {
@@ -1646,13 +1676,21 @@
         panel.className = `player-card-panel ${isCurrent ? 'active-turn' : ''}`;
         panel.dataset.playerIdx = String(idx);
 
+        const isReturningHere = Boolean(isCurrent && this.state.pendingTokenReturn && totalTokens > 10);
+        const excessCount = Math.max(0, totalTokens - 10);
+
         // Resource cells (5 gems + gold) with high-visibility color themes & Korean labels
         const resCellsHtml = ALL_TOKEN_KEYS.map((gKey) => {
           const meta = GEM_UI_META[gKey];
           const tCount = p.tokens[gKey] || 0;
           const bCount = gKey === 'gold' ? 0 : bonuses[gKey] || 0;
+          const canReturnThis = isReturningHere && tCount > 0;
           return `
-            <div class="p-res-cell gem-col-${gKey}" data-player-gem="${gKey}" title="${meta.kor}: 보유 토큰 ${tCount}개 / 영구 보너스 카드 +${bCount}장">
+            <div class="p-res-cell gem-col-${gKey} ${canReturnThis ? 'returnable' : ''}" data-player-gem="${gKey}" title="${
+              canReturnThis
+                ? `클릭하여 [${meta.kor}] 토큰 1개 반납 (현재 ${tCount}개 보유)`
+                : `${meta.kor}: 보유 토큰 ${tCount}개 / 영구 보너스 카드 +${bCount}장`
+            }">
               <span style="font-size:0.65rem; font-weight:900; color:#f9fafb; text-shadow:0 1px 2px #000;">${meta.short}</span>
               <span class="p-res-dot ${meta.swatch}" style="background-image:url('${meta.chipImg}'); background-size:cover; background-position:center;"></span>
               <span class="p-res-nums" title="보유 토큰 ${tCount}개">🪙${tCount}</span>
@@ -1701,6 +1739,10 @@
           (!global.SplendorNet || global.SplendorNet.mode === 'local') &&
           p.reservedCards.length > 0;
 
+        const returnBannerHtml = isReturningHere
+          ? `<div class="p-return-banner" data-inline-return-banner="1">⚠️ 토큰 10개 초과 (${totalTokens}/10) · 아래 내 보석 칸을 클릭해 ${excessCount}개 반납하세요!</div>`
+          : '';
+
         panel.innerHTML = `
           <div class="p-header">
             <div class="p-name-wrap">
@@ -1710,11 +1752,12 @@
             <span class="p-score-badge">🏆 ${p.points} / ${this.state.config.targetPoints}점</span>
           </div>
 
+          ${returnBannerHtml}
           <div class="p-resources-grid">${resCellsHtml}</div>
 
           <div class="p-meta-bar">
             <span class="p-winrate-pill" title="${p.name} 누적 승률">${winRateText}</span>
-            <span>🪙토큰: <strong>${totalTokens}/10</strong></span>
+            <span style="${isReturningHere ? 'color:#fca5a5; font-weight:900;' : ''}">🪙토큰: <strong>${totalTokens}/10</strong></span>
             <span>🃏카드: <strong>${p.purchasedCards.length}장</strong></span>
             <span>👑귀족: <strong>${p.nobles.length}명</strong></span>
             ${enableStrongholds ? `<span>🏯성채: <strong>${p.strongholdsLeft}</strong></span>` : ''}
@@ -1732,6 +1775,25 @@
           </div>
           <div class="p-reserved-row">${reservedSlotsHtml}</div>
         `;
+
+        // Bind inline token return click on .p-res-cell.returnable
+        if (isReturningHere) {
+          panel.querySelectorAll('.p-res-cell.returnable').forEach((cellEl) => {
+            cellEl.addEventListener('click', (e) => {
+              e.stopPropagation();
+              if (!this._canLocalUserActNow()) {
+                this.showToast('현재 당신의 차례가 아닙니다.');
+                return;
+              }
+              const gemKey = cellEl.dataset.playerGem;
+              if (!gemKey || (p.tokens[gemKey] || 0) <= 0) return;
+              this.dispatchPlayerAction({
+                actionType: 'RETURN_ONE_TOKEN',
+                payload: { gem: gemKey }
+              });
+            });
+          });
+        }
 
         // Bind privacy toggle button
         const privBtn = panel.querySelector('[data-toggle-privacy]');
