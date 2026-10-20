@@ -291,6 +291,8 @@
           joinedAt: Date.now()
         };
         this.connectedPeers.push(existing);
+      } else if (name) {
+        existing.name = name;
       }
 
       const acceptPacket = {

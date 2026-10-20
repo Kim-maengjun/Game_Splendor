@@ -231,6 +231,32 @@
 
     playVictoryFanfare() {
       this.playNobleFanfare();
+    },
+
+    /** Soft 2-tone descending warning beep for invalid input (잘못된 조작 알림음) */
+    playErrorBeep() {
+      if (this.muted) return;
+      const ctx = this.init();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+      [{ f: 360, t: 0 }, { f: 240, t: 0.11 }].forEach(({ f, t }) => {
+        const t0 = now + t;
+        const osc = ctx.createOscillator();
+        const filter = ctx.createBiquadFilter();
+        const gain = ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(f, t0);
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(1100, t0);
+        gain.gain.setValueAtTime(0.001, t0);
+        gain.gain.linearRampToValueAtTime(0.09, t0 + 0.008);
+        gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.1);
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(t0);
+        osc.stop(t0 + 0.11);
+      });
     }
   };
 

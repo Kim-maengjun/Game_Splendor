@@ -6,13 +6,13 @@
  * - window.SplendorPhysics3D (physics_3d.js)
  * - window.SplendorNet (multiplayer.js)
  *
- * Build Version: [v1.2.6 | 2026-10-20 17:15]
+ * Build Version: [v1.3.1 | 2026-10-20 22:12]
  */
 
 (function (global) {
   'use strict';
 
-  const APP_VERSION = '[v1.2.6 | 2026-10-20 17:15]';
+  const APP_VERSION = '[v1.3.1 | 2026-10-20 22:12]';
   const WIN_STATS_STORAGE_KEY = 'splendor_win_stats_v1';
 
   // Gem key mapping & UI helpers
@@ -150,17 +150,84 @@
       const params = new URLSearchParams(window.location.search);
       const roomParam = params.get('room');
       if (roomParam) {
+        const cleanRoom = roomParam.trim().toUpperCase();
         this.lobbyConfig.netMode = 'online';
+        const netGroup = document.getElementById('netModeGroup');
+        if (netGroup) {
+          netGroup.querySelectorAll('.radio-pill').forEach((p) => {
+            p.classList.toggle('selected', p.dataset.net === 'online');
+          });
+        }
         this._syncLobbyNetUI();
         const inputEl = document.getElementById('inputRoomCode');
-        if (inputEl) inputEl.value = roomParam.toUpperCase();
-        if (global.SplendorNet) {
-          global.SplendorNet.joinRoom(roomParam.toUpperCase(), '원격 참가자');
-        }
+        if (inputEl) inputEl.value = cleanRoom;
+        setTimeout(() => {
+          this._openRemoteJoinNameModal(cleanRoom);
+        }, 120);
       }
 
       // Initialize default background game immediately so the 3D board is alive behind the modal
       this.startNewGame(false);
+    }
+
+    _openRemoteJoinNameModal(roomCode) {
+      const backdrop = document.getElementById('cardActionModalBackdrop');
+      const titleEl = document.getElementById('cardModalTitle');
+      const bodyEl = document.getElementById('cardModalBody');
+      if (!backdrop || !bodyEl) return;
+
+      if (titleEl) {
+        titleEl.textContent = `🌐 원격 참가자 이름 등록 (방 코드: ${roomCode})`;
+      }
+
+      const existingInput = document.getElementById('inputRemotePlayerName');
+      const defaultName = (existingInput && existingInput.value.trim()) || '';
+
+      bodyEl.innerHTML = `
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <div style="font-size:0.86rem; color:#d1d5db; line-height:1.5;">
+            초대받은 방 <strong>[${roomCode}]</strong>에 입장할 게이머 이름을 입력해 주세요.
+          </div>
+          <input type="text" id="modalRemoteNameInput" class="slot-name-input" placeholder="이름을 입력하세요 (예: 홍길동)" value="${defaultName}" maxlength="16" style="padding:10px 12px; font-size:0.95rem;" />
+          <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:4px;">
+            <button type="button" class="hdr-btn primary" id="modalBtnConfirmRemoteJoin" style="padding:9px 16px;">🚀 이 이름으로 방 참가하기</button>
+          </div>
+        </div>
+      `;
+
+      backdrop.classList.remove('hidden');
+
+      const nameField = document.getElementById('modalRemoteNameInput');
+      const confirmBtn = document.getElementById('modalBtnConfirmRemoteJoin');
+
+      const doJoin = () => {
+        const enteredName = (nameField && nameField.value.trim()) || '참가 플레이어';
+        const remoteNameEl = document.getElementById('inputRemotePlayerName');
+        if (remoteNameEl) remoteNameEl.value = enteredName;
+        if (this.lobbyConfig.slots[0]) {
+          this.lobbyConfig.slots[0].name = enteredName;
+        }
+        backdrop.classList.add('hidden');
+        if (global.SplendorNet) {
+          const ok = global.SplendorNet.joinRoom(roomCode, enteredName);
+          if (ok) {
+            this.showToast(`방 [${roomCode}]에 '${enteredName}' 이름으로 참가 요청을 보냈습니다...`);
+          }
+        }
+      };
+
+      if (confirmBtn) {
+        confirmBtn.addEventListener('click', doJoin);
+      }
+      if (nameField) {
+        nameField.focus();
+        nameField.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            doJoin();
+          }
+        });
+      }
     }
 
     /* ========================================================================
@@ -208,6 +275,7 @@
             pill.classList.add('selected');
             this.lobbyConfig.netMode = pill.dataset.net || 'local';
             this._syncLobbyNetUI();
+            this._renderSlotsConfiguration();
             this._playClickSound();
           });
         });
@@ -240,9 +308,17 @@
         btnJoinRoom.addEventListener('click', () => {
           if (!global.SplendorNet || !inputRoomCode) return;
           const code = inputRoomCode.value.trim();
-          const ok = global.SplendorNet.joinRoom(code, '참가 플레이어');
+          const remoteNameEl = document.getElementById('inputRemotePlayerName');
+          const customName =
+            (remoteNameEl && remoteNameEl.value.trim()) ||
+            (this.lobbyConfig.slots[0] && this.lobbyConfig.slots[0].name) ||
+            '참가 플레이어';
+          if (remoteNameEl && !remoteNameEl.value.trim()) {
+            remoteNameEl.value = customName;
+          }
+          const ok = global.SplendorNet.joinRoom(code, customName);
           if (ok) {
-            this.showToast(`방 [${code.toUpperCase()}]에 연결 요청을 보냈습니다...`);
+            this.showToast(`방 [${code.toUpperCase()}]에 '${customName}' 이름으로 연결 요청을 보냈습니다...`);
           }
         });
       }
@@ -298,6 +374,7 @@
 
       for (let i = 0; i < this.lobbyConfig.playerCount; i++) {
         const slot = this.lobbyConfig.slots[i];
+        this._normalizeSlotDefaultName(slot, i);
         const row = document.createElement('div');
         row.className = 'slot-config-row';
 
@@ -333,24 +410,43 @@
           slot.isAI = e.target.value === 'ai';
           diffSelect.disabled = !slot.isAI;
           diffSelect.style.opacity = slot.isAI ? '1' : '0.4';
-          if (slot.isAI && slot.name.startsWith('플레이어')) {
-            slot.name = `르네상스 AI ${i + 1}`;
-            nameInput.value = slot.name;
-          } else if (!slot.isAI && slot.name.includes('AI')) {
-            slot.name = `플레이어 ${i + 1}`;
-            nameInput.value = slot.name;
-          }
+          this._normalizeSlotDefaultName(slot, i);
+          nameInput.value = slot.name;
         });
 
         diffSelect.addEventListener('change', (e) => {
           slot.difficulty = e.target.value;
+          if (this._isDefaultAIName(slot.name)) {
+            slot.name = this._getDefaultAIName(slot.difficulty, i);
+            nameInput.value = slot.name;
+          }
         });
 
         row.appendChild(label);
-        row.appendChild(nameInput);
         row.appendChild(typeSelect);
+        row.appendChild(nameInput);
         row.appendChild(diffSelect);
         container.appendChild(row);
+      }
+    }
+
+    _getDefaultAIName(difficulty, i) {
+      const base = difficulty === 'easy' ? '견습상인 AI' : difficulty === 'hard' ? '길드장 AI' : '르네상스 AI';
+      return `${base} ${i + 1}`;
+    }
+
+    _isDefaultAIName(name) {
+      return /AI|길드장|견습상인|르네상스/.test(String(name || ''));
+    }
+
+    _normalizeSlotDefaultName(slot, i) {
+      if (!slot) return;
+      const name = String(slot.name || '').trim();
+      const isHumanDefault = !name || /^플레이어\s*\d*$/.test(name) || /참가 플레이어|원격 참가자/.test(name);
+      if (slot.isAI && isHumanDefault) {
+        slot.name = this._getDefaultAIName(slot.difficulty, i);
+      } else if (!slot.isAI && (this._isDefaultAIName(name) || !name)) {
+        slot.name = `플레이어 ${i + 1}`;
       }
     }
 
@@ -401,6 +497,7 @@
       });
 
       global.SplendorNet.on('onStateSync', (remoteState, meta) => {
+        const prevTurnIdx = this.state ? this.state.currentPlayerIndex : null;
         // Client receives updated state from Host (first play 3D flying animations on old DOM before re-rendering!)
         if (meta && meta.animFx) {
           this._replaySyncedAnimationFX(meta.animFx, false);
@@ -412,6 +509,15 @@
           this.showToast(meta.toast);
         }
         this.renderAll();
+        if (
+          remoteState &&
+          !remoteState.gameOver &&
+          prevTurnIdx !== remoteState.currentPlayerIndex &&
+          remoteState.players &&
+          remoteState.players[remoteState.currentPlayerIndex]
+        ) {
+          this._speakTurnAnnouncement(remoteState.players[remoteState.currentPlayerIndex]);
+        }
         if (meta && meta.animFx && meta.animFx.dealAnim && global.SplendorPhysics3D) {
           const { level, slotIdx, cardObj } = meta.animFx.dealAnim;
           const deckEl = document.querySelector(`.deck-stack-3d[data-tier="${level}"]`);
@@ -580,6 +686,7 @@
           `${modeId === 'modern' ? '🏯 최신 확장 룰' : '🏛️ 전통 룰'} (${count}인 대전) 새 게임이 시작되었습니다!`
         );
         this._broadcastAuthoritativeState('방장이 새 게임을 시작했습니다!');
+        this._speakTurnAnnouncement(this.state.players[this.state.currentPlayerIndex]);
       }
 
       this.renderAll();
@@ -1059,6 +1166,7 @@
       this._lastSyncAnimFx = null;
       this._broadcastAuthoritativeState(null, animFxToBroadcast);
       this.renderAll();
+      this._speakTurnAnnouncement(this.state.players[this.state.currentPlayerIndex]);
       this._checkAndScheduleAITurn();
     }
 
@@ -1296,12 +1404,7 @@
 
         tile.innerHTML = `<div class="noble-reqs">${reqHtml}</div>`;
 
-        const nameBadge = document.createElement('div');
-        nameBadge.className = 'noble-external-name';
-        nameBadge.textContent = noble.korName;
-
         wrap.appendChild(tile);
-        wrap.appendChild(nameBadge);
 
         wrap.addEventListener('click', () => {
           this.highlightedNobleId = this.highlightedNobleId === noble.id ? null : noble.id;
@@ -1647,6 +1750,7 @@
       const container = document.getElementById('playersSidebarContainer');
       if (!container || !this.state) return;
       container.innerHTML = '';
+      container.classList.toggle('grid-4p', this.state.players.length >= 4);
 
       // Top Win-Rate Header Bar + Reset Button
       const statsBar = document.createElement('div');
@@ -2364,9 +2468,69 @@
       this._playChipSound(1);
     }
 
+    _speakTurnAnnouncement(player) {
+      if (!player || !player.name) return;
+      if (
+        global.SplendorPhysics3D &&
+        global.SplendorPhysics3D.SoundFX &&
+        global.SplendorPhysics3D.SoundFX.muted
+      ) {
+        return;
+      }
+      if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+      try {
+        window.speechSynthesis.cancel();
+        // Read digits in Sino-Korean (1→일, 2→이, 3→삼, 4→사 ...)
+        const spokenName = String(player.name).replace(/\d+/g, (m) => this._toSinoKorean(Number(m)));
+        const utter = new SpeechSynthesisUtterance(`${spokenName} 차례입니다.`);
+        utter.lang = 'ko-KR';
+        utter.rate = 0.92;
+        utter.pitch = 1.05;
+        utter.volume = 0.95;
+
+        const voices = window.speechSynthesis.getVoices() || [];
+        const koVoices = voices.filter((v) => /ko/i.test(v.lang) || /ko/i.test(v.name));
+        if (koVoices.length > 0) {
+          const preferred =
+            koVoices.find((v) => /Heami|SunHi|Yuna|Sora|Female|여성|Google 한국의/i.test(v.name)) ||
+            koVoices[0];
+          if (preferred) utter.voice = preferred;
+        }
+        window.speechSynthesis.speak(utter);
+      } catch (e) {
+        // Ignore TTS error if blocked by browser autoplay policy
+      }
+    }
+
+    _toSinoKorean(num) {
+      const digits = ['', '일', '이', '삼', '사', '오', '육', '칠', '팔', '구'];
+      if (!Number.isFinite(num) || num < 0 || num > 9999) return String(num);
+      if (num === 0) return '영';
+      const units = ['', '십', '백', '천'];
+      let out = '';
+      const s = String(num);
+      for (let i = 0; i < s.length; i++) {
+        const d = Number(s[i]);
+        const unitIdx = s.length - 1 - i;
+        if (d === 0) continue;
+        out += (d === 1 && unitIdx > 0 ? '' : digits[d]) + units[unitIdx];
+      }
+      return out;
+    }
+
+    _isErrorToast(message) {
+      const msg = String(message || '');
+      if (/^(💡|👑|🔥|🏆|🎉|🔄)/.test(msg)) return false;
+      return /⚠️|아닙니다|부족|없습니다|수 없|최대|기다려|유효한|중복|가득|먼저|때만|소진/.test(msg);
+    }
+
     showToast(message) {
       const container = document.getElementById('toastContainer');
       if (!container) return;
+      if (this._isErrorToast(message) && global.SplendorPhysics3D && global.SplendorPhysics3D.SoundFX &&
+          global.SplendorPhysics3D.SoundFX.playErrorBeep) {
+        global.SplendorPhysics3D.SoundFX.playErrorBeep();
+      }
       const item = document.createElement('div');
       item.className = 'toast-item';
       item.textContent = message;
