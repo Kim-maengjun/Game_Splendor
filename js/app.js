@@ -6,13 +6,13 @@
  * - window.SplendorPhysics3D (physics_3d.js)
  * - window.SplendorNet (multiplayer.js)
  *
- * Build Version: [v1.2.5 | 2026-10-20 08:12]
+ * Build Version: [v1.2.6 | 2026-10-20 17:15]
  */
 
 (function (global) {
   'use strict';
 
-  const APP_VERSION = '[v1.2.5 | 2026-10-20 08:12]';
+  const APP_VERSION = '[v1.2.6 | 2026-10-20 17:15]';
   const WIN_STATS_STORAGE_KEY = 'splendor_win_stats_v1';
 
   // Gem key mapping & UI helpers
@@ -1679,7 +1679,7 @@
         const isReturningHere = Boolean(isCurrent && this.state.pendingTokenReturn && totalTokens > 10);
         const excessCount = Math.max(0, totalTokens - 10);
 
-        // Resource cells (5 gems + gold) with high-visibility color themes & Korean labels
+        // Resource cells (5 gems + gold) with high-visibility color themes (text label removed for compact 4P height)
         const resCellsHtml = ALL_TOKEN_KEYS.map((gKey) => {
           const meta = GEM_UI_META[gKey];
           const tCount = p.tokens[gKey] || 0;
@@ -1691,7 +1691,6 @@
                 ? `클릭하여 [${meta.kor}] 토큰 1개 반납 (현재 ${tCount}개 보유)`
                 : `${meta.kor}: 보유 토큰 ${tCount}개 / 영구 보너스 카드 +${bCount}장`
             }">
-              <span style="font-size:0.65rem; font-weight:900; color:#f9fafb; text-shadow:0 1px 2px #000;">${meta.short}</span>
               <span class="p-res-dot ${meta.swatch}" style="background-image:url('${meta.chipImg}'); background-size:cover; background-position:center;"></span>
               <span class="p-res-nums" title="보유 토큰 ${tCount}개">🪙${tCount}</span>
               <span class="p-res-bonus" title="${gKey === 'gold' ? '황금 조커 토큰' : `구매한 ${meta.kor} 카드 보너스 +${bCount}`}">${gKey === 'gold' ? '조커' : `🃏+${bCount}`}</span>
@@ -1787,14 +1786,14 @@
 
           <div class="p-meta-bar">
             <span class="p-winrate-pill" title="${p.name} 누적 승률">${winRateText}</span>
-            <span style="${isReturningHere ? 'color:#fca5a5; font-weight:900;' : ''}">🪙토큰: <strong>${totalTokens}/10</strong></span>
-            <span>🃏카드: <strong>${p.purchasedCards.length}장</strong></span>
-            <span>👑귀족: <strong>${p.nobles.length}명</strong></span>
-            ${enableStrongholds ? `<span>🏯성채: <strong>${p.strongholdsLeft}</strong></span>` : ''}
+            <span style="${isReturningHere ? 'color:#fca5a5; font-weight:900;' : ''}">🪙<strong>${totalTokens}/10</strong></span>
+            <span>🃏<strong>${p.purchasedCards.length}장</strong></span>
+            <span>👑<strong>${p.nobles.length}명</strong></span>
+            ${enableStrongholds ? `<span>🏯<strong>${p.strongholdsLeft}</strong></span>` : ''}
           </div>
 
           <div style="display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:0.7rem; color:#d1d5db;">📌 예약 카드 (${p.reservedCards.length}/3) · 클릭 시 즉시 구매</span>
+            <span style="font-size:0.65rem; color:#d1d5db;">📌 예약 카드 (${p.reservedCards.length}/3) · 클릭 시 구매</span>
             ${
               showPrivacyBtn
                 ? `<button class="privacy-btn" data-toggle-privacy="1">${

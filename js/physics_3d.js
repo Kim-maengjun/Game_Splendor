@@ -122,33 +122,33 @@
       if (!ctx) return;
 
       const now = ctx.currentTime;
-      const duration = 0.19;
+      const duration = 0.21;
       const bufferSize = Math.floor(ctx.sampleRate * duration);
       const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
       const data = buffer.getChannelData(0);
 
       for (let i = 0; i < bufferSize; i++) {
         const p = i / bufferSize;
-        // Asymmetric paper-turn envelope: brisk lift -> smooth glide -> soft laydown
-        const env = Math.pow(Math.sin(p * Math.PI), 0.75) * (1 - 0.25 * p);
-        data[i] = (Math.random() * 2 - 1) * env * 0.38;
+        // Asymmetric paper-turn envelope: brisk lift -> smooth glide -> crisp laydown
+        const env = Math.pow(Math.sin(p * Math.PI), 0.65) * (1 - 0.18 * p);
+        data[i] = (Math.random() * 2 - 1) * env * 0.85;
       }
 
       const noise = ctx.createBufferSource();
       noise.buffer = buffer;
 
-      // Sweeping bandpass filter (420Hz -> 1380Hz -> 620Hz) mimics paper flex & turn
+      // Sweeping bandpass filter (450Hz -> 1450Hz -> 680Hz) with wider Q for richer paper body
       const filter = ctx.createBiquadFilter();
       filter.type = 'bandpass';
-      filter.frequency.setValueAtTime(420, now);
-      filter.frequency.exponentialRampToValueAtTime(1380, now + duration * 0.45);
-      filter.frequency.exponentialRampToValueAtTime(620, now + duration);
-      filter.Q.value = 1.35;
+      filter.frequency.setValueAtTime(450, now);
+      filter.frequency.exponentialRampToValueAtTime(1450, now + duration * 0.42);
+      filter.frequency.exponentialRampToValueAtTime(680, now + duration);
+      filter.Q.value = 0.85;
 
       const gain = ctx.createGain();
-      gain.gain.setValueAtTime(0.005, now);
-      gain.gain.linearRampToValueAtTime(0.22, now + 0.032);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+      gain.gain.setValueAtTime(0.02, now);
+      gain.gain.linearRampToValueAtTime(0.65, now + 0.028);
+      gain.gain.exponentialRampToValueAtTime(0.002, now + duration);
 
       noise.connect(filter);
       filter.connect(gain);
@@ -156,6 +156,22 @@
 
       noise.start(now);
       noise.stop(now + duration);
+
+      // Subtle low-mid paper snap/thump on card laydown so it matches token volume presence
+      const snapOsc = ctx.createOscillator();
+      const snapGain = ctx.createGain();
+      snapOsc.type = 'triangle';
+      snapOsc.frequency.setValueAtTime(240, now + 0.015);
+      snapOsc.frequency.exponentialRampToValueAtTime(95, now + 0.095);
+
+      snapGain.gain.setValueAtTime(0.001, now + 0.015);
+      snapGain.gain.linearRampToValueAtTime(0.28, now + 0.025);
+      snapGain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+
+      snapOsc.connect(snapGain);
+      snapGain.connect(ctx.destination);
+      snapOsc.start(now + 0.015);
+      snapOsc.stop(now + 0.105);
     },
 
     /** Warm Mellotron/Cello-like Chord for Noble Visit (C4 - E4 - G4 - C5) */
