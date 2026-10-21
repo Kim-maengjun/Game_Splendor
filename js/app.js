@@ -6,13 +6,13 @@
  * - window.SplendorPhysics3D (physics_3d.js)
  * - window.SplendorNet (multiplayer.js)
  *
- * Build Version: [v1.3.1 | 2026-10-20 22:12]
+ * Build Version: [v1.3.2 | 2026-10-22 00:19]
  */
 
 (function (global) {
   'use strict';
 
-  const APP_VERSION = '[v1.3.1 | 2026-10-20 22:12]';
+  const APP_VERSION = '[v1.3.2 | 2026-10-22 00:19]';
   const WIN_STATS_STORAGE_KEY = 'splendor_win_stats_v1';
 
   // Gem key mapping & UI helpers
@@ -2482,7 +2482,7 @@
         window.speechSynthesis.cancel();
         // Read digits in Sino-Korean (1→일, 2→이, 3→삼, 4→사 ...)
         const spokenName = String(player.name).replace(/\d+/g, (m) => this._toSinoKorean(Number(m)));
-        const utter = new SpeechSynthesisUtterance(`${spokenName} 차례입니다.`);
+        const utter = new SpeechSynthesisUtterance(`${spokenName} 님 차례입니다.`);
         utter.lang = 'ko-KR';
         utter.rate = 0.92;
         utter.pitch = 1.05;
